@@ -1,7 +1,7 @@
 (() => {
   "use strict";
 
-  const VERSION = "0.1.0";
+  const VERSION = "0.1.1";
   const FLOW = {
     low: {label:"niedrig", value:0.8, efficiency:0.82},
     medium: {label:"mittel", value:1.2, efficiency:1.00},
@@ -15,6 +15,7 @@
   let db = null;
   let history = [];
   let lastRun = null;
+  let selectedHistoryIndex = null;
   const els = {};
 
   document.addEventListener("DOMContentLoaded", init);
@@ -56,7 +57,12 @@
     els.sampleSelect.addEventListener("change",updateInfo);
     els.columnSelect.addEventListener("change",updateInfo);
     els.runBtn.addEventListener("click",runGc);
-    els.resetBtn.addEventListener("click",()=>{history=[]; lastRun=null; renderHistory(); resetMetrics(); drawEmptyChromatogram(); setFeedback("Wähle eine Methode und starte den ersten Lauf.","neutral");});
+    els.historyTable.addEventListener("click",event=>{
+      const row=event.target.closest("tr[data-history-index]");
+      if(!row) return;
+      showHistoryRun(Number(row.dataset.historyIndex));
+    });
+    els.resetBtn.addEventListener("click",()=>{history=[]; lastRun=null; selectedHistoryIndex=null; renderHistory(); resetMetrics(); drawEmptyChromatogram(); setFeedback("Wähle eine Methode und starte den ersten Lauf.","neutral");});
   }
 
   function applyLevel(){
@@ -172,6 +178,7 @@
     const run=simulate(currentSample(),method());
     lastRun=run;
     history.push(run);
+    selectedHistoryIndex=history.length-1;
     renderRun(run);
     renderHistory();
   }
@@ -189,10 +196,28 @@
 
   function renderHistory(){
     if(!history.length){els.historyTable.innerHTML='<tr><td colspan="8" class="muted">Noch keine Läufe.</td></tr>';return;}
-    els.historyTable.innerHTML=history.map((r,i)=>`<tr>
+    els.historyTable.innerHTML=history.map((r,i)=>`<tr class="history-row ${i===selectedHistoryIndex?"selected":""}" data-history-index="${i}" title="Run ${i+1} anzeigen">
       <td>${i+1}</td><td>${r.method.column_id==="COLUMN_NP"?"unpolar":"polar"}</td><td>${r.method.length_m} m</td>
       <td>${r.method.temperature_c} °C</td><td>${FLOW[r.method.flow_key].label}</td><td>${fmt(r.runtime,2)} min</td>
       <td>${r.minRs===null?"–":fmt(r.minRs,2)}</td><td>${r.quality.label}</td></tr>`).join("");
+  }
+
+  function showHistoryRun(index){
+    const run=history[index];
+    if(!run) return;
+    selectedHistoryIndex=index;
+    lastRun=run;
+
+    els.sampleSelect.value=run.sample.id;
+    els.columnSelect.value=run.method.column_id;
+    els.lengthSelect.value=String(run.method.length_m);
+    els.temperatureSelect.value=String(run.method.temperature_c);
+    els.flowSelect.value=run.method.flow_key;
+    updateInfo();
+
+    renderRun(run);
+    els.runStatus.textContent=`Run ${index+1} aus Historie`;
+    renderHistory();
   }
 
   function setFeedback(text,kind){

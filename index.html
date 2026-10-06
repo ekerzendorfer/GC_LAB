@@ -14,8 +14,21 @@
       <h1>GC-LAB</h1>
       <p>Gaschromatographie verstehen, Methoden entwickeln und Trennqualität beurteilen.</p>
     </div>
-    <div class="version">v0.1.1<br><small>Single-Mode</small></div>
+    <div class="version">v0.1.2<br><small id="modeLabel">Single-Mode</small></div>
   </header>
+
+  <div id="bridgeContext" class="bridge-context">
+    <div>
+      <strong>Analyseauftrag aus dem Proben-Hub</strong>
+      <div id="bridgeSampleLabel" class="bridge-meta"></div>
+      <div id="bridgeRunLabel" class="bridge-run"></div>
+      <div id="bridgeMessage" class="bridge-meta"></div>
+    </div>
+    <div class="bridge-actions">
+      <button id="bridgeAcceptBtn" class="primary compact" type="button" disabled>Run an Hub übernehmen</button>
+      <button id="bridgeReturnBtn" class="secondary compact" type="button">Ohne Ergebnis zurück</button>
+    </div>
+  </div>
 
   <main class="layout">
     <aside class="card controls">

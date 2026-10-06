@@ -1,6 +1,6 @@
 # GC-LAB
 
-**Version:** v0.1.0 – erster Single-Mode-Prototyp  
+**Version:** v0.1.1 – Single-Mode mit anklickbarer Versuchshistorie  
 **Projekt:** CHEMIE mit KI – Digitales Analytiklabor
 
 Browserbasiertes virtuelles Gaschromatographie-Labor ohne Build-Prozess und ohne Backend.
@@ -61,3 +61,14 @@ GC_LAB/
 ```
 
 Die Stoff-IDs entsprechen von Beginn an den CORE-IDs des Digitalen Analytiklabors.
+
+
+## v0.1.1 – Historienvergleich
+
+- Einträge der Versuchshistorie sind anklickbar.
+- Beim Anklicken werden Chromatogramm, Messwerte und Methodenfeedback des gewählten Runs erneut dargestellt.
+- Die damals verwendeten Parameter werden zugleich wieder in die Methodenauswahl übernommen.
+- Der aktuell angezeigte Run wird in der Historie markiert.
+- Ein neuer Lauf wird automatisch zum aktuell ausgewählten Historieneintrag.
+
+Für spätere Versionen vorgemerkt: zeitlich entstehendes Chromatogramm mit wählbarer Beobachtungsgeschwindigkeit sowie behutsam realistischere Signalform/Basislinie.

@@ -181,7 +181,8 @@
   }
 
   function qualityFor(minRs, peakCount, runtime){
-    if(peakCount<2) return {key:"single",label:"ein Peak sichtbar",className:"warn"};
+    if(peakCount===1) return {key:"single",label:"ein sauberer Peak",className:"good"};
+    if(peakCount<1) return {key:"none",label:"kein Peak sichtbar",className:"warn"};
     if(minRs<1.0) return {key:"bad",label:"unzureichend",className:"bad"};
     if(minRs<1.5) return {key:"partial",label:"teilweise getrennt",className:"warn"};
     if(minRs>=3.0 && runtime>8) return {key:"slow",label:"sehr gut, aber langsam",className:"good"};
@@ -190,7 +191,12 @@
 
   function feedbackFor(run){
     const m=run.method;
-    if(run.analytes.length<2) return "Nur ein relevanter Peak ist sichtbar. Prüfe Probe, Detektionsgrenze und Methode.";
+    if(run.analytes.length===0) return "Kein relevanter Peak ist sichtbar. Prüfe Probe, Detektionsgrenze und Methode.";
+    if(run.analytes.length===1){
+      return bridgeMode
+        ? "Ein einzelner sauberer Peak ist sichtbar. Für nur einen detektierten Peak ist Rₛ nicht definiert; dieser Lauf kann an den Hub übernommen werden. Die Stoffidentität ist damit noch nicht geklärt."
+        : "Ein einzelner sauberer Peak ist sichtbar. Für nur einen detektierten Peak ist Rₛ nicht definiert.";
+    }
     if(run.minRs>=1.5){
       if(run.minRs>=3 && run.runtime>8) return `Rₛ = ${fmt(run.minRs,2)}: sehr gute Trennung, aber die Methode ist relativ langsam. Kürzere Säule, höhere Temperatur oder höherer Gasstrom könnten Zeit sparen.`;
       return bridgeMode
@@ -263,12 +269,19 @@
   function updateBridgeAccept(run){
     if(!bridgeMode || !els.bridgeAcceptBtn) return;
     const threshold=Number(bridgeInput?.minimum_resolution ?? 1.5);
-    const accepted=!!(run && run.analytes.length>=2 && run.minRs!==null && run.minRs>=threshold);
+    const singleAllowed=bridgeInput?.single_peak_allowed !== false;
+    const singlePeak=!!(run && run.analytes.length===1);
+    const multiAccepted=!!(run && run.analytes.length>=2 && run.minRs!==null && run.minRs>=threshold);
+    const accepted=(singleAllowed && singlePeak) || multiAccepted;
     els.bridgeAcceptBtn.disabled=!accepted;
     if(run){
-      setBridgeBanner(accepted
-        ? `Mindestauflösung erreicht (Rₛ = ${fmt(run.minRs,2)}). Dieser Lauf kann übernommen werden.`
-        : `Noch nicht ausreichend getrennt. Für die Rückgabe ist Rₛ ≥ ${fmt(threshold,1)} erforderlich.`);
+      if(singleAllowed && singlePeak){
+        setBridgeBanner("Ein sauberer Peak sichtbar. Rₛ ist für einen Einzelpeak nicht definiert; der Lauf kann übernommen werden.");
+      }else if(multiAccepted){
+        setBridgeBanner(`Mindestauflösung erreicht (Rₛ = ${fmt(run.minRs,2)}). Dieser Lauf kann übernommen werden.`);
+      }else{
+        setBridgeBanner(`Noch nicht ausreichend getrennt. Bei mehreren Peaks ist für die Rückgabe Rₛ ≥ ${fmt(threshold,1)} erforderlich.`);
+      }
     }
   }
 
@@ -326,7 +339,10 @@
   function sendBridgeResult(){
     if(!bridgeMode || !bridgeRun || !lastRun || !window.AnalytikBridge) return;
     const threshold=Number(bridgeInput?.minimum_resolution ?? 1.5);
-    if(lastRun.minRs===null || lastRun.minRs<threshold) return;
+    const singleAllowed=bridgeInput?.single_peak_allowed !== false;
+    const singlePeak=lastRun.analytes.length===1;
+    const multiAccepted=lastRun.analytes.length>=2 && lastRun.minRs!==null && lastRun.minRs>=threshold;
+    if(!((singleAllowed && singlePeak) || multiAccepted)) return;
 
     const peaks=lastRun.analytes.map(a=>({
       peak_id:a.peakId,
@@ -360,11 +376,14 @@
         runtime_min:Number(lastRun.runtime.toFixed(4)),
         peak_count:peaks.length,
         peaks,
-        minimum_resolution:Number(lastRun.minRs.toFixed(4))
+        minimum_resolution:lastRun.minRs===null ? null : Number(lastRun.minRs.toFixed(4)),
+        resolution_applicable:lastRun.analytes.length>=2
       },
       evaluation:{
-        minimum_resolution:Number(lastRun.minRs.toFixed(4)),
+        minimum_resolution:lastRun.minRs===null ? null : Number(lastRun.minRs.toFixed(4)),
+        resolution_applicable:lastRun.analytes.length>=2,
         acceptance_threshold:threshold,
+        acceptance_reason:singlePeak ? "single_detected_peak" : "minimum_resolution_met",
         accepted:true,
         attempts:history.length
       },

@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="GC-LAB – browserbasiertes virtuelles Gaschromatographie-Labor für den Chemieunterricht.">
+  <title>GC-LAB – Virtueller Gaschromatograph</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="hero">
+    <div>
+      <p class="eyebrow">CHEMIE mit KI · VIRTUELLES LABOR</p>
+      <h1>GC-LAB</h1>
+      <p>Gaschromatographie verstehen, Methoden entwickeln und Trennqualität beurteilen.</p>
+    </div>
+    <div class="version">v0.1.0<br><small>Single-Mode</small></div>
+  </header>
+
+  <main class="layout">
+    <aside class="card controls">
+      <h2>Methode</h2>
+
+      <label>Betriebsniveau
+        <select id="levelSelect">
+          <option value="basic">Grundmodus</option>
+          <option value="method" selected>Methodenentwicklung</option>
+        </select>
+      </label>
+
+      <label>Probe
+        <select id="sampleSelect"></select>
+      </label>
+      <p id="sampleInfo" class="hint"></p>
+
+      <label>Stationäre Phase
+        <select id="columnSelect"></select>
+      </label>
+      <p id="columnInfo" class="hint"></p>
+
+      <label>Säulenlänge
+        <select id="lengthSelect">
+          <option value="15">15 m</option>
+          <option value="30" selected>30 m</option>
+          <option value="60">60 m</option>
+        </select>
+      </label>
+      <p class="hint">Länger → meist höhere Auflösung, aber längere Laufzeit.</p>
+
+      <label>Ofentemperatur
+        <select id="temperatureSelect"></select>
+      </label>
+      <p class="hint">Höher → kürzere Retention, häufig geringere Trennung.</p>
+
+      <label>Trägergasstrom
+        <select id="flowSelect">
+          <option value="low">niedrig · 0,8 mL/min</option>
+          <option value="medium" selected>mittel · 1,2 mL/min</option>
+          <option value="high">hoch · 1,8 mL/min</option>
+        </select>
+      </label>
+      <p class="hint">Der mittlere Strom liegt im didaktischen Modell nahe am Effizienzoptimum.</p>
+
+      <button id="runBtn" class="primary" type="button">GC-Lauf starten</button>
+      <button id="resetBtn" class="secondary" type="button">Versuchshistorie löschen</button>
+    </aside>
+
+    <section class="card chromatogram-card">
+      <div class="section-head">
+        <div>
+          <p class="kicker">Chromatogramm</p>
+          <h2>Detektorsignal</h2>
+        </div>
+        <div id="runStatus" class="status-pill">bereit</div>
+      </div>
+      <canvas id="chromCanvas" width="980" height="480" aria-label="Chromatogramm"></canvas>
+      <div id="methodFeedback" class="feedback neutral">
+        Wähle eine Methode und starte den ersten Lauf.
+      </div>
+    </section>
+
+    <aside class="card results">
+      <h2>Messwerte</h2>
+      <div class="metric-grid">
+        <div><span>Laufzeit</span><strong id="runtimeMetric">–</strong></div>
+        <div><span>Peaks</span><strong id="peakCountMetric">–</strong></div>
+        <div><span>min. Rₛ</span><strong id="rsMetric">–</strong></div>
+        <div><span>Bewertung</span><strong id="qualityMetric">–</strong></div>
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Peak</th><th>tR / min</th><th>Fläche / %</th><th>Breite / min</th></tr></thead>
+          <tbody id="peakTable"><tr><td colspan="4" class="muted">Noch kein Lauf.</td></tr></tbody>
+        </table>
+      </div>
+      <p class="hint">Peakflächen-% sind in diesem vereinfachten FID-Modell nicht automatisch Stoffmengen-%.</p>
+    </aside>
+
+    <section class="card history-card">
+      <div class="section-head">
+        <div>
+          <p class="kicker">Methodenentwicklung</p>
+          <h2>Versuchshistorie</h2>
+        </div>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Run</th><th>Säule</th><th>Länge</th><th>T</th><th>Flow</th><th>Laufzeit</th><th>min. Rₛ</th><th>Bewertung</th></tr></thead>
+          <tbody id="historyTable"><tr><td colspan="8" class="muted">Noch keine Läufe.</td></tr></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="card model-card">
+      <h2>Was verändert die Trennung?</h2>
+      <div class="concept-grid">
+        <div><strong>Temperatur</strong><span>steuert Retentionsfaktoren und Laufzeit</span></div>
+        <div><strong>Stationäre Phase</strong><span>ändert die Selektivität</span></div>
+        <div><strong>Säulenlänge</strong><span>beeinflusst Effizienz und Laufzeit</span></div>
+        <div><strong>Gasstrom</strong><span>beeinflusst Totzeit und Effizienz</span></div>
+      </div>
+      <p class="hint">GC-LAB v0.1 verwendet bewusst kuratierte Modellparameter. Es ist kein universeller Retentionszeit-Rechner.</p>
+    </section>
+  </main>
+
+  <footer>GC-LAB · browserbasiert · GitHub-Pages-tauglich · keine Installation</footer>
+  <script src="app.js" defer></script>
+</body>
+</html>

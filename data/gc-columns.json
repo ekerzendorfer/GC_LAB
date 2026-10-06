@@ -1,0 +1,17 @@
+{
+  "schema_version": "0.1.0",
+  "columns": [
+    {
+      "id": "COLUMN_NP",
+      "name_de": "Unpolare Kapillarsäule",
+      "description_de": "Schwach unpolare stationäre Phase; Flüchtigkeit und Siedepunkt prägen die Retention besonders stark.",
+      "efficiency_factor": 1.0
+    },
+    {
+      "id": "COLUMN_POLAR",
+      "name_de": "Polare Kapillarsäule",
+      "description_de": "Polare stationäre Phase; polare Analyten werden relativ stärker zurückgehalten, wodurch sich die Selektivität ändert.",
+      "efficiency_factor": 0.96
+    }
+  ]
+}

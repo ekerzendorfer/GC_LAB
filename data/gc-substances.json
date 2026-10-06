@@ -1,0 +1,94 @@
+{
+  "schema_version": "0.1.0",
+  "reference_temperature_c": 100,
+  "substances": [
+    {
+      "id": "ACETONE",
+      "name_de": "Aceton",
+      "formula": "C3H6O",
+      "boiling_point_c": 56.1,
+      "detector_response": 0.82,
+      "gc": {
+        "COLUMN_NP": {"k_ref": 0.42, "temp_coeff": 0.023},
+        "COLUMN_POLAR": {"k_ref": 0.70, "temp_coeff": 0.025}
+      }
+    },
+    {
+      "id": "METHANOL",
+      "name_de": "Methanol",
+      "formula": "CH4O",
+      "boiling_point_c": 64.7,
+      "detector_response": 0.55,
+      "gc": {
+        "COLUMN_NP": {"k_ref": 0.36, "temp_coeff": 0.024},
+        "COLUMN_POLAR": {"k_ref": 1.20, "temp_coeff": 0.028}
+      }
+    },
+    {
+      "id": "ETHANOL",
+      "name_de": "Ethanol",
+      "formula": "C2H6O",
+      "boiling_point_c": 78.4,
+      "detector_response": 0.72,
+      "gc": {
+        "COLUMN_NP": {"k_ref": 0.62, "temp_coeff": 0.026},
+        "COLUMN_POLAR": {"k_ref": 1.55, "temp_coeff": 0.029}
+      }
+    },
+    {
+      "id": "ETHYL_ACETATE",
+      "name_de": "Ethylacetat",
+      "formula": "C4H8O2",
+      "boiling_point_c": 77.1,
+      "detector_response": 1.00,
+      "gc": {
+        "COLUMN_NP": {"k_ref": 0.85, "temp_coeff": 0.025},
+        "COLUMN_POLAR": {"k_ref": 1.00, "temp_coeff": 0.027}
+      }
+    },
+    {
+      "id": "HEXANE",
+      "name_de": "n-Hexan",
+      "formula": "C6H14",
+      "boiling_point_c": 68.7,
+      "detector_response": 1.16,
+      "gc": {
+        "COLUMN_NP": {"k_ref": 0.95, "temp_coeff": 0.025},
+        "COLUMN_POLAR": {"k_ref": 0.55, "temp_coeff": 0.023}
+      }
+    },
+    {
+      "id": "CYCLOHEXANE",
+      "name_de": "Cyclohexan",
+      "formula": "C6H12",
+      "boiling_point_c": 80.7,
+      "detector_response": 1.15,
+      "gc": {
+        "COLUMN_NP": {"k_ref": 1.24, "temp_coeff": 0.027},
+        "COLUMN_POLAR": {"k_ref": 0.72, "temp_coeff": 0.024}
+      }
+    },
+    {
+      "id": "TOLUENE",
+      "name_de": "Toluol",
+      "formula": "C7H8",
+      "boiling_point_c": 110.6,
+      "detector_response": 1.28,
+      "gc": {
+        "COLUMN_NP": {"k_ref": 2.05, "temp_coeff": 0.030},
+        "COLUMN_POLAR": {"k_ref": 1.34, "temp_coeff": 0.027}
+      }
+    },
+    {
+      "id": "BUTAN_1_OL",
+      "name_de": "1-Butanol",
+      "formula": "C4H10O",
+      "boiling_point_c": 117.7,
+      "detector_response": 1.08,
+      "gc": {
+        "COLUMN_NP": {"k_ref": 1.80, "temp_coeff": 0.030},
+        "COLUMN_POLAR": {"k_ref": 2.80, "temp_coeff": 0.033}
+      }
+    }
+  ]
+}

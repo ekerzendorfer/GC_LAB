@@ -1,0 +1,33 @@
+{
+  "schema_version": "0.1.0",
+  "samples": [
+    {
+      "id": "SAMPLE_EA_BUOH_50",
+      "name_de": "Ethylacetat / 1-Butanol (50 : 50)",
+      "description_de": "Zweikomponentengemisch für den Einstieg in die Methodenentwicklung.",
+      "composition": [
+        {"substance_id": "ETHYL_ACETATE", "fraction": 0.50},
+        {"substance_id": "BUTAN_1_OL", "fraction": 0.50}
+      ]
+    },
+    {
+      "id": "SAMPLE_HEX_TOL_50",
+      "name_de": "n-Hexan / Toluol (50 : 50)",
+      "description_de": "Unpolares Zweikomponentengemisch zum Vergleich der Säulentypen.",
+      "composition": [
+        {"substance_id": "HEXANE", "fraction": 0.50},
+        {"substance_id": "TOLUENE", "fraction": 0.50}
+      ]
+    },
+    {
+      "id": "SAMPLE_ACE_ETOH_TOL",
+      "name_de": "Aceton / Ethanol / Toluol (35 : 35 : 30)",
+      "description_de": "Dreikomponentengemisch als erster Ausblick auf komplexere Chromatogramme.",
+      "composition": [
+        {"substance_id": "ACETONE", "fraction": 0.35},
+        {"substance_id": "ETHANOL", "fraction": 0.35},
+        {"substance_id": "TOLUENE", "fraction": 0.30}
+      ]
+    }
+  ]
+}

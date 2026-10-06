@@ -46,7 +46,12 @@
     populateControls();
     bindEvents();
     applyLevel();
-    updateInfo();
+    if(bridgeMode){
+      els.sampleInfo.textContent="Hub-Probe wird geladen …";
+      els.columnInfo.textContent=currentColumn().description_de;
+    }else{
+      updateInfo();
+    }
     drawEmptyChromatogram();
     if(bridgeMode) await initAnalytikBridge();
   }
@@ -69,7 +74,10 @@
   }
 
   function populateControls(){
-    els.sampleSelect.innerHTML = db.samples.map(s=>`<option value="${s.id}">${s.name_de}</option>`).join("");
+    els.sampleSelect.innerHTML = bridgeMode
+      ? '<option value="">Hub-Probe wird geladen …</option>'
+      : db.samples.map(s=>`<option value="${s.id}">${s.name_de}</option>`).join("");
+    if(bridgeMode) els.sampleSelect.disabled=true;
     els.columnSelect.innerHTML = db.columns.map(c=>`<option value="${c.id}">${c.name_de}</option>`).join("");
     els.temperatureSelect.innerHTML = Array.from({length:8},(_,i)=>70+i*10).map(t=>`<option value="${t}" ${t===100?"selected":""}>${t} °C</option>`).join("");
   }

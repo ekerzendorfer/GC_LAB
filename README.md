@@ -83,9 +83,14 @@ Im Hub-Modus:
 - bleiben Stoffidentitäten und Zusammensetzung im SchülerInnen-UI verborgen,
 - sind alle vier Methodenparameter der Methodenentwicklung verfügbar,
 - bleiben unzureichende Runs in der Versuchshistorie sichtbar,
-- wird `Run an Hub übernehmen` erst ab `R_s ≥ 1,5` aktiviert,
+- kann ein sauberer Einzelpeak direkt übernommen werden (`R_s` ist dann nicht anwendbar); bei mehreren Peaks wird `Run an Hub übernehmen` erst ab `R_s ≥ 1,5` aktiviert,
 - enthält das RESULT Retentionszeiten, Peakflächen, Peakbreiten und minimale Auflösung,
 - bleiben die Peaks als P1/P2/... fachlich zunächst unidentifiziert,
 - wird eine interne Peak→CORE-ID-Zuordnung nur für die spätere Strukturaufklärungs-Kopplung transportiert.
 
 Das Fraktionsvolumen beeinflusst die GC-Peakfläche nicht direkt; jede GC-Messung verwendet eine standardisierte kleine Injektionsmenge.
+
+
+### Einzelpeak-Regel
+
+Die Auflösung `R_s` ist nur zwischen mindestens zwei Peaks definiert. Eine nahezu reine Destillationsfraktion kann daher einen einzigen detektierbaren Peak liefern. Ein solcher Lauf ist als GC-Messung gültig und darf an den Hub zurückgegeben werden; die Stoffidentität bleibt dennoch unbekannt. Bei zwei oder mehr Peaks gilt weiterhin die Mindestauflösung `R_s ≥ 1,5`.

@@ -30,3 +30,15 @@ footer{max-width:1500px;margin:0 auto;padding:0 22px 25px;color:#71869e;text-ali
 .history-row.selected{background:rgba(34,184,207,.16);box-shadow:inset 3px 0 0 #22b8cf}
 .history-row.selected td{color:#eefcff}
 .history-hint{margin-top:-4px;margin-bottom:10px}
+
+
+.bridge-context{display:none;max-width:1500px;margin:0 auto 14px;padding:12px 16px;border:1px solid rgba(34,184,207,.55);border-radius:14px;background:rgba(15,120,144,.14);gap:18px;align-items:center;justify-content:space-between}
+.bridge-context.active{display:flex}
+.bridge-context.error{border-color:rgba(251,113,133,.7);background:rgba(127,29,29,.2)}
+.bridge-context strong{display:block;color:#b9f3fa;margin-bottom:3px}
+.bridge-meta{color:#c9d7e5;font-size:.86rem}
+.bridge-run{color:#7f95ad;font:0.75rem ui-monospace,SFMono-Regular,Consolas,monospace;margin:2px 0}
+.bridge-actions{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+.bridge-actions button.compact{width:auto;margin-top:0;white-space:nowrap}
+.bridge-actions button:disabled{opacity:.42;cursor:not-allowed;filter:none}
+@media(max-width:720px){.bridge-context{margin-inline:12px;align-items:stretch;flex-direction:column}.bridge-actions{justify-content:stretch}.bridge-actions button.compact{width:100%}}

@@ -163,7 +163,7 @@
     if(m.temperature_c>=120) hints.push("Temperatur senken, damit sich die Retentionsunterschiede stärker ausprägen");
     if(m.length_m===15) hints.push("eine längere Kapillarsäule wählen");
     if(m.flow_key==="high") hints.push("den Gasstrom auf mittel reduzieren");
-    if(m.column_id==="COLUMN_NP") hints.push("die polare Phase testen, weil sie.die Selektivität verändern kann");
+    if(m.column_id==="COLUMN_NP") hints.push("die polare Phase testen, weil sie die Selektivität verändern kann");
     if(!hints.length) hints.push("systematisch jeweils nur einen Parameter verändern und die Selektivität vergleichen");
     return `Rₛ = ${fmt(run.minRs,2)}: noch nicht ausreichend. Versuche: ${hints.join("; ")}.`;
   }

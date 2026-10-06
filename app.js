@@ -1,7 +1,7 @@
 (() => {
   "use strict";
 
-  const VERSION = "0.1.1";
+  const VERSION = "0.1.2";
   const FLOW = {
     low: {label:"niedrig", value:0.8, efficiency:0.82},
     medium: {label:"mittel", value:1.2, efficiency:1.00},
@@ -16,9 +16,29 @@
   let history = [];
   let lastRun = null;
   let selectedHistoryIndex = null;
+  let bridgeMode = bridgeRequested();
+  let bridgeRun = null;
+  let bridgeInput = null;
+  let hubSample = null;
   const els = {};
 
   document.addEventListener("DOMContentLoaded", init);
+
+  function bridgeRequested(){
+    const params=new URLSearchParams(window.location.search);
+    return params.get("bridge")==="1";
+  }
+
+  function loadAnalytikBridgeScript(){
+    if(window.AnalytikBridge) return Promise.resolve(window.AnalytikBridge);
+    return new Promise((resolve,reject)=>{
+      const script=document.createElement("script");
+      script.src=new URL("../CHEMIE_ANALYTIK_HUB/bridge/chemie-analytik-bridge.js",window.location.href).toString();
+      script.onload=()=>window.AnalytikBridge?resolve(window.AnalytikBridge):reject(new Error("Bridge-API fehlt."));
+      script.onerror=()=>reject(new Error("CHEMIE_ANALYTIK_BRIDGE konnte nicht geladen werden."));
+      document.head.appendChild(script);
+    });
+  }
 
   async function init(){
     bindEls();
@@ -26,14 +46,21 @@
     populateControls();
     bindEvents();
     applyLevel();
-    updateInfo();
+    if(bridgeMode){
+      els.sampleInfo.textContent="Hub-Probe wird geladen …";
+      els.columnInfo.textContent=currentColumn().description_de;
+    }else{
+      updateInfo();
+    }
     drawEmptyChromatogram();
+    if(bridgeMode) await initAnalytikBridge();
   }
 
   function bindEls(){
     ["levelSelect","sampleSelect","columnSelect","lengthSelect","temperatureSelect","flowSelect",
       "sampleInfo","columnInfo","runBtn","resetBtn","chromCanvas","runStatus","methodFeedback",
-      "runtimeMetric","peakCountMetric","rsMetric","qualityMetric","peakTable","historyTable"]
+      "runtimeMetric","peakCountMetric","rsMetric","qualityMetric","peakTable","historyTable",
+      "bridgeContext","bridgeSampleLabel","bridgeRunLabel","bridgeMessage","bridgeAcceptBtn","bridgeReturnBtn","modeLabel"]
       .forEach(id => els[id] = document.getElementById(id));
   }
 
@@ -47,7 +74,10 @@
   }
 
   function populateControls(){
-    els.sampleSelect.innerHTML = db.samples.map(s=>`<option value="${s.id}">${s.name_de}</option>`).join("");
+    els.sampleSelect.innerHTML = bridgeMode
+      ? '<option value="">Hub-Probe wird geladen …</option>'
+      : db.samples.map(s=>`<option value="${s.id}">${s.name_de}</option>`).join("");
+    if(bridgeMode) els.sampleSelect.disabled=true;
     els.columnSelect.innerHTML = db.columns.map(c=>`<option value="${c.id}">${c.name_de}</option>`).join("");
     els.temperatureSelect.innerHTML = Array.from({length:8},(_,i)=>70+i*10).map(t=>`<option value="${t}" ${t===100?"selected":""}>${t} °C</option>`).join("");
   }
@@ -82,7 +112,7 @@
     els.columnInfo.textContent = column.description_de;
   }
 
-  function currentSample(){return db.samples.find(x=>x.id===els.sampleSelect.value) || db.samples[0];}
+  function currentSample(){return bridgeMode && hubSample ? hubSample : (db.samples.find(x=>x.id===els.sampleSelect.value) || db.samples[0]);}
   function currentColumn(){return db.columns.find(x=>x.id===els.columnSelect.value) || db.columns[0];}
   function substance(id){return db.substances.find(x=>x.id===id);}
 
@@ -151,7 +181,8 @@
   }
 
   function qualityFor(minRs, peakCount, runtime){
-    if(peakCount<2) return {key:"single",label:"ein Peak sichtbar",className:"warn"};
+    if(peakCount===1) return {key:"single",label:"ein sauberer Peak",className:"good"};
+    if(peakCount<1) return {key:"none",label:"kein Peak sichtbar",className:"warn"};
     if(minRs<1.0) return {key:"bad",label:"unzureichend",className:"bad"};
     if(minRs<1.5) return {key:"partial",label:"teilweise getrennt",className:"warn"};
     if(minRs>=3.0 && runtime>8) return {key:"slow",label:"sehr gut, aber langsam",className:"good"};
@@ -160,10 +191,17 @@
 
   function feedbackFor(run){
     const m=run.method;
-    if(run.analytes.length<2) return "Nur ein relevanter Peak ist sichtbar. Prüfe Probe, Detektionsgrenze und Methode.";
+    if(run.analytes.length===0) return "Kein relevanter Peak ist sichtbar. Prüfe Probe, Detektionsgrenze und Methode.";
+    if(run.analytes.length===1){
+      return bridgeMode
+        ? "Ein einzelner sauberer Peak ist sichtbar. Für nur einen detektierten Peak ist Rₛ nicht definiert; dieser Lauf kann an den Hub übernommen werden. Die Stoffidentität ist damit noch nicht geklärt."
+        : "Ein einzelner sauberer Peak ist sichtbar. Für nur einen detektierten Peak ist Rₛ nicht definiert.";
+    }
     if(run.minRs>=1.5){
       if(run.minRs>=3 && run.runtime>8) return `Rₛ = ${fmt(run.minRs,2)}: sehr gute Trennung, aber die Methode ist relativ langsam. Kürzere Säule, höhere Temperatur oder höherer Gasstrom könnten Zeit sparen.`;
-      return `Rₛ = ${fmt(run.minRs,2)}: analytisch brauchbare Trennung. Dieser Lauf würde die Hub-Freigabeschwelle Rₛ ≥ 1,5 erfüllen.`;
+      return bridgeMode
+        ? `Rₛ = ${fmt(run.minRs,2)}: analytisch brauchbare Trennung. Dieser Lauf kann an den Proben-Hub übernommen werden.`
+        : `Rₛ = ${fmt(run.minRs,2)}: analytisch brauchbare Trennung.`;
     }
     const hints=[];
     if(m.temperature_c>=120) hints.push("Temperatur senken, damit sich die Retentionsunterschiede stärker ausprägen");
@@ -192,6 +230,7 @@
     els.qualityMetric.textContent=run.quality.label;
     els.peakTable.innerHTML=run.analytes.map(a=>`<tr><td>${a.peakId}</td><td>${fmt(a.tr,2)}</td><td>${fmt(a.areaPercent,1)}</td><td>${fmt(a.width,2)}</td></tr>`).join("");
     setFeedback(feedbackFor(run),run.quality.className);
+    updateBridgeAccept(run);
   }
 
   function renderHistory(){
@@ -218,6 +257,145 @@
     renderRun(run);
     els.runStatus.textContent=`Run ${index+1} aus Historie`;
     renderHistory();
+  }
+
+  function setBridgeBanner(message,isError=false){
+    if(!els.bridgeContext) return;
+    els.bridgeContext.classList.add("active");
+    els.bridgeContext.classList.toggle("error",!!isError);
+    els.bridgeMessage.textContent=message||"";
+  }
+
+  function updateBridgeAccept(run){
+    if(!bridgeMode || !els.bridgeAcceptBtn) return;
+    const threshold=Number(bridgeInput?.minimum_resolution ?? 1.5);
+    const singleAllowed=bridgeInput?.single_peak_allowed !== false;
+    const singlePeak=!!(run && run.analytes.length===1);
+    const multiAccepted=!!(run && run.analytes.length>=2 && run.minRs!==null && run.minRs>=threshold);
+    const accepted=(singleAllowed && singlePeak) || multiAccepted;
+    els.bridgeAcceptBtn.disabled=!accepted;
+    if(run){
+      if(singleAllowed && singlePeak){
+        setBridgeBanner("Ein sauberer Peak sichtbar. Rₛ ist für einen Einzelpeak nicht definiert; der Lauf kann übernommen werden.");
+      }else if(multiAccepted){
+        setBridgeBanner(`Mindestauflösung erreicht (Rₛ = ${fmt(run.minRs,2)}). Dieser Lauf kann übernommen werden.`);
+      }else{
+        setBridgeBanner(`Noch nicht ausreichend getrennt. Bei mehreren Peaks ist für die Rückgabe Rₛ ≥ ${fmt(threshold,1)} erforderlich.`);
+      }
+    }
+  }
+
+  function normalizeHubComposition(runtimeSample){
+    const raw=Array.isArray(runtimeSample?.composition_internal) ? runtimeSample.composition_internal : [];
+    const usable=raw
+      .filter(x=>x && x.substance_id && Number.isFinite(Number(x.fraction_model)))
+      .map(x=>({substance_id:x.substance_id,fraction:Number(x.fraction_model)}))
+      .filter(x=>x.fraction>0 && substance(x.substance_id));
+    const sum=usable.reduce((s,x)=>s+x.fraction,0);
+    if(sum<=0) throw new Error("Die Runtime-Probe enthält keine verwertbare GC-Zusammensetzung.");
+    return usable.map(x=>({substance_id:x.substance_id,fraction:x.fraction/sum}));
+  }
+
+  async function initAnalytikBridge(){
+    const params=new URLSearchParams(window.location.search);
+    const runId=params.get("run");
+    try{
+      if(!runId) throw new Error("run-Parameter fehlt.");
+      await loadAnalytikBridgeScript();
+      const run=window.AnalytikBridge.getRun(runId);
+      if(!run) throw new Error("Der Analyse-Run wurde nicht gefunden.");
+      if(run.app_id!=="GC_LAB") throw new Error("Der Run ist nicht für GC-LAB bestimmt.");
+      if(!run.input || run.input.mode!=="unknown_mixture") throw new Error("Unbekannter GC-Auftrag.");
+
+      bridgeRun=run;
+      bridgeInput=run.input;
+      const runtimeSample=bridgeInput.runtime_sample;
+      hubSample={
+        id:run.sample_id,
+        name_de:bridgeInput.display_label || "Unbekannte Destillationsfraktion",
+        description_de:"Runtime-Probe aus dem Proben-Hub. Stoffidentitäten und interne Zusammensetzung bleiben verborgen.",
+        composition:normalizeHubComposition(runtimeSample)
+      };
+
+      els.levelSelect.value="method";
+      els.levelSelect.disabled=true;
+      applyLevel();
+      els.sampleSelect.innerHTML=`<option value="${run.sample_id}">${hubSample.name_de}</option>`;
+      els.sampleSelect.disabled=true;
+      els.sampleInfo.textContent=hubSample.description_de;
+      if(els.modeLabel) els.modeLabel.textContent="Analytik-Hub";
+      els.bridgeSampleLabel.textContent=`${hubSample.name_de} · ${run.sample_id}`;
+      els.bridgeRunLabel.textContent=run.run_id;
+      els.bridgeAcceptBtn.disabled=true;
+      els.bridgeAcceptBtn.addEventListener("click",sendBridgeResult);
+      els.bridgeReturnBtn.addEventListener("click",()=>window.AnalytikBridge.returnToHub(bridgeRun));
+      setBridgeBanner(bridgeInput.note || "Entwickle eine GC-Methode mit ausreichender Trennung.");
+    }catch(err){
+      setBridgeBanner("Hub-Verbindung fehlgeschlagen: "+err.message,true);
+      els.runBtn.disabled=true;
+    }
+  }
+
+  function sendBridgeResult(){
+    if(!bridgeMode || !bridgeRun || !lastRun || !window.AnalytikBridge) return;
+    const threshold=Number(bridgeInput?.minimum_resolution ?? 1.5);
+    const singleAllowed=bridgeInput?.single_peak_allowed !== false;
+    const singlePeak=lastRun.analytes.length===1;
+    const multiAccepted=lastRun.analytes.length>=2 && lastRun.minRs!==null && lastRun.minRs>=threshold;
+    if(!((singleAllowed && singlePeak) || multiAccepted)) return;
+
+    const peaks=lastRun.analytes.map(a=>({
+      peak_id:a.peakId,
+      retention_time_min:Number(a.tr.toFixed(4)),
+      area:Number((a.responseArea*10000).toFixed(2)),
+      area_percent:Number(a.areaPercent.toFixed(2)),
+      width_min:Number(a.width.toFixed(4))
+    }));
+    const studentInterpretation={};
+    const peakMap={};
+    lastRun.analytes.forEach(a=>{
+      studentInterpretation[a.peakId]={identity_status:"unknown"};
+      peakMap[a.peakId]=a.substance.id;
+    });
+
+    const result={
+      result_id:"RES_"+Date.now()+"_"+Math.random().toString(36).slice(2,7),
+      run_id:bridgeRun.run_id,
+      case_id:bridgeRun.case_id,
+      sample_id:bridgeRun.sample_id,
+      app_id:"GC_LAB",
+      app_version:VERSION,
+      analysis_type:"GC",
+      status:"completed",
+      source:"app",
+      measurement:{
+        column:lastRun.method.column_id,
+        column_length_m:lastRun.method.length_m,
+        temperature_c:lastRun.method.temperature_c,
+        flow_ml_min:lastRun.method.flow_ml_min,
+        runtime_min:Number(lastRun.runtime.toFixed(4)),
+        peak_count:peaks.length,
+        peaks,
+        minimum_resolution:lastRun.minRs===null ? null : Number(lastRun.minRs.toFixed(4)),
+        resolution_applicable:lastRun.analytes.length>=2
+      },
+      evaluation:{
+        minimum_resolution:lastRun.minRs===null ? null : Number(lastRun.minRs.toFixed(4)),
+        resolution_applicable:lastRun.analytes.length>=2,
+        acceptance_threshold:threshold,
+        acceptance_reason:singlePeak ? "single_detected_peak" : "minimum_resolution_met",
+        accepted:true,
+        attempts:history.length
+      },
+      student_interpretation:studentInterpretation,
+      internal_payload:{
+        peak_map:peakMap
+      },
+      created_at:new Date().toISOString()
+    };
+
+    const completed=window.AnalytikBridge.completeRun(bridgeRun.run_id,result);
+    window.AnalytikBridge.returnToHub(completed);
   }
 
   function setFeedback(text,kind){

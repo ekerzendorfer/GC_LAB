@@ -14,7 +14,7 @@
       <h1>GC-LAB</h1>
       <p>Gaschromatographie verstehen, Methoden entwickeln und Trennqualität beurteilen.</p>
     </div>
-    <div class="version">v0.1.2<br><small id="modeLabel">Single-Mode</small></div>
+    <div class="version">v0.2.0<br><small id="modeLabel">Single-Mode</small></div>
   </header>
 
   <div id="bridgeContext" class="bridge-context">
@@ -29,6 +29,39 @@
       <button id="bridgeReturnBtn" class="secondary compact" type="button">Ohne Ergebnis zurück</button>
     </div>
   </div>
+
+  <section id="verificationPanel" class="verification-panel">
+    <div class="verification-head">
+      <div>
+        <p class="kicker">Gezielte Identitätsbestätigung</p>
+        <h2><span id="verificationHypothesis">–</span> chromatographisch prüfen</h2>
+        <p class="hint">Die Strukturhypothese ist spektroskopisch gestützt. Jetzt wird sie mit Referenzstandard und Aufstockung unter unveränderten GC-Bedingungen geprüft.</p>
+      </div>
+      <div class="verification-source">
+        <strong id="verificationPeak">–</strong>
+        <span id="verificationMethod">–</span>
+      </div>
+    </div>
+    <div class="verification-steps">
+      <div class="verification-step">
+        <span class="step-no">1</span>
+        <div><strong>Referenzstandard</strong><p>Stimmt seine Retentionszeit mit dem Zielpeak überein?</p></div>
+        <button id="standardRunBtn" class="primary compact" type="button">Referenzstandard messen</button>
+        <div id="standardEvidence" class="verification-evidence neutral">noch nicht gemessen</div>
+      </div>
+      <div class="verification-step">
+        <span class="step-no">2</span>
+        <div><strong>Aufstockung</strong><p>Wird derselbe Peak größer, ohne dass ein neuer Peak entsteht?</p></div>
+        <button id="spikeRunBtn" class="primary compact" type="button" disabled>Probe aufstocken & messen</button>
+        <div id="spikeEvidence" class="verification-evidence neutral">nach Referenzstandard</div>
+      </div>
+    </div>
+    <div id="verificationLegend" class="verification-legend"></div>
+    <div class="verification-zoom">
+      <div><strong>Zielpeak – vergrößert</strong><span id="verificationZoomLegend">Vergleich der Peakhöhen am Zielsignal.</span></div>
+      <canvas id="verificationZoomCanvas" width="1000" height="210" aria-label="Vergrößerter Zielpeak"></canvas>
+    </div>
+  </section>
 
   <main class="layout">
     <aside class="card controls">

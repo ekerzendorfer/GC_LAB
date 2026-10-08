@@ -42,3 +42,22 @@ footer{max-width:1500px;margin:0 auto;padding:0 22px 25px;color:#71869e;text-ali
 .bridge-actions button.compact{width:auto;margin-top:0;white-space:nowrap}
 .bridge-actions button:disabled{opacity:.42;cursor:not-allowed;filter:none}
 @media(max-width:720px){.bridge-context{margin-inline:12px;align-items:stretch;flex-direction:column}.bridge-actions{justify-content:stretch}.bridge-actions button.compact{width:100%}}
+
+
+/* v0.2.0 · gezielte GC-Bestätigung */
+.verification-panel{display:none;max-width:1500px;margin:0 auto 14px;padding:16px 18px;border:1px solid rgba(245,198,106,.45);border-radius:16px;background:rgba(91,63,15,.16)}
+.verification-panel.active{display:block}.verification-head{display:flex;justify-content:space-between;gap:18px;align-items:flex-start}
+.verification-head h2{margin:.2rem 0 .25rem}.verification-source{display:grid;gap:3px;text-align:right;padding:9px 12px;border:1px solid var(--line);border-radius:10px;background:#0b1728}
+.verification-source span{color:var(--muted);font-size:.8rem}.verification-steps{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}
+.verification-step{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;padding:12px;border:1px solid var(--line);border-radius:12px;background:#0b1728}
+.verification-step p{margin:2px 0;color:var(--muted);font-size:.82rem}.step-no{display:grid;place-items:center;width:30px;height:30px;border-radius:50%;background:#17304b;color:#dff7fa;font-weight:800}
+.verification-step button{width:auto;margin:0}.verification-evidence{grid-column:2/4;font-size:.82rem;color:var(--muted)}
+.verification-evidence strong{display:block;margin-bottom:2px}.verification-evidence.good{color:#8ff0ca}.verification-evidence.bad{color:#ffb1bd}
+.verification-evidence span{color:var(--muted)}.verification-legend{margin-top:10px;color:#9fb2c8;font-size:.82rem}
+@media(max-width:900px){.verification-steps{grid-template-columns:1fr}.verification-head{flex-direction:column}.verification-source{text-align:left}.verification-step{grid-template-columns:auto 1fr}.verification-step button,.verification-evidence{grid-column:2}}
+
+.verification-zoom{margin-top:12px;padding:10px;border:1px solid var(--line);border-radius:12px;background:#07101c}
+.verification-zoom>div{display:flex;justify-content:space-between;gap:12px;align-items:baseline;margin-bottom:7px}
+.verification-zoom span{color:var(--muted);font-size:.8rem}
+#verificationZoomCanvas{display:block;width:100%;height:auto;border:1px solid rgba(42,61,88,.75);border-radius:9px;background:#07101c}
+@media(max-width:720px){.verification-zoom>div{align-items:flex-start;flex-direction:column}}

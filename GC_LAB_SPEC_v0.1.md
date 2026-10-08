@@ -320,3 +320,19 @@ Keine Build-Tools, kein Backend, keine Installation.
 - Nur analytisch brauchbare Läufe werden im Hub akzeptiert.
 - Die App modelliert Zusammenhänge und Entscheidungen; sie erhebt keinen Anspruch auf universelle reale Retentionsvorhersage.
 - Datenmodell und IDs sind von Beginn an CORE-/Bridge-kompatibel.
+
+
+## Nachtrag v0.2.0 – gezielte Identitätsbestätigung
+
+Nach einer spektroskopisch gestützten Hypothese kann GC-LAB im Hub-Modus mit mode = targeted_confirmation gestartet werden.
+
+Beweisschritte:
+1. ursprüngliche GC-Methode unverändert übernehmen und sperren,
+2. gezielten Referenzstandard messen und Retentionszeit vergleichen,
+3. Ausgangsprobe mit demselben Standard aufstocken,
+4. bestätigen, dass derselbe Peak wächst und kein neuer Peak entsteht,
+5. erst dann GC_CONFIRMATION mit identity_status = confirmed an den Hub zurückgeben.
+
+Die Aufstockung verwendet eine kuratierte relative Zusatzmenge. Für den Nachweis des Peakwachstums wird die absolute modellierte Detektorantwort verwendet; dadurch bleibt der Test auch bei einem 100-%-Einzelpeak aussagekräftig.
+
+Kein Blind-Screening mehrerer Standards: Der Standard wird ausschließlich aus der zuvor spektroskopisch begründeten Strukturhypothese gewählt.

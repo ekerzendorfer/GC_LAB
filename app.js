@@ -1,7 +1,7 @@
 (() => {
   "use strict";
 
-  const VERSION = "0.1.2";
+  const VERSION = "0.2.0";
   const FLOW = {
     low: {label:"niedrig", value:0.8, efficiency:0.82},
     medium: {label:"mittel", value:1.2, efficiency:1.00},
@@ -20,6 +20,11 @@
   let bridgeRun = null;
   let bridgeInput = null;
   let hubSample = null;
+  let verificationMode = false;
+  let verificationOriginalRun = null;
+  let verificationStandardRun = null;
+  let verificationSpikeRun = null;
+  let verificationEvidence = {standard:false,spike:false};
   const els = {};
 
   document.addEventListener("DOMContentLoaded", init);
@@ -60,7 +65,9 @@
     ["levelSelect","sampleSelect","columnSelect","lengthSelect","temperatureSelect","flowSelect",
       "sampleInfo","columnInfo","runBtn","resetBtn","chromCanvas","runStatus","methodFeedback",
       "runtimeMetric","peakCountMetric","rsMetric","qualityMetric","peakTable","historyTable",
-      "bridgeContext","bridgeSampleLabel","bridgeRunLabel","bridgeMessage","bridgeAcceptBtn","bridgeReturnBtn","modeLabel"]
+      "bridgeContext","bridgeSampleLabel","bridgeRunLabel","bridgeMessage","bridgeAcceptBtn","bridgeReturnBtn","modeLabel",
+      "verificationPanel","verificationHypothesis","verificationPeak","verificationMethod","standardRunBtn","spikeRunBtn",
+      "standardEvidence","spikeEvidence","verificationLegend"]
       .forEach(id => els[id] = document.getElementById(id));
   }
 
@@ -93,6 +100,8 @@
       showHistoryRun(Number(row.dataset.historyIndex));
     });
     els.resetBtn.addEventListener("click",()=>{history=[]; lastRun=null; selectedHistoryIndex=null; renderHistory(); resetMetrics(); drawEmptyChromatogram(); setFeedback("Wähle eine Methode und starte den ersten Lauf.","neutral");});
+    els.standardRunBtn.addEventListener("click",runVerificationStandard);
+    els.spikeRunBtn.addEventListener("click",runVerificationSpike);
   }
 
   function applyLevel(){
@@ -267,7 +276,7 @@
   }
 
   function updateBridgeAccept(run){
-    if(!bridgeMode || !els.bridgeAcceptBtn) return;
+    if(!bridgeMode || !els.bridgeAcceptBtn || verificationMode) return;
     const threshold=Number(bridgeInput?.minimum_resolution ?? 1.5);
     const singleAllowed=bridgeInput?.single_peak_allowed !== false;
     const singlePeak=!!(run && run.analytes.length===1);
@@ -305,7 +314,7 @@
       const run=window.AnalytikBridge.getRun(runId);
       if(!run) throw new Error("Der Analyse-Run wurde nicht gefunden.");
       if(run.app_id!=="GC_LAB") throw new Error("Der Run ist nicht für GC-LAB bestimmt.");
-      if(!run.input || run.input.mode!=="unknown_mixture") throw new Error("Unbekannter GC-Auftrag.");
+      if(!run.input || !["unknown_mixture","targeted_confirmation"].includes(run.input.mode)) throw new Error("Unbekannter GC-Auftrag.");
 
       bridgeRun=run;
       bridgeInput=run.input;
@@ -313,27 +322,252 @@
       hubSample={
         id:run.sample_id,
         name_de:bridgeInput.display_label || "Unbekannte Destillationsfraktion",
-        description_de:"Runtime-Probe aus dem Proben-Hub. Stoffidentitäten und interne Zusammensetzung bleiben verborgen.",
+        description_de:"Runtime-Probe aus dem Proben-Hub.",
         composition:normalizeHubComposition(runtimeSample)
       };
 
-      els.levelSelect.value="method";
-      els.levelSelect.disabled=true;
-      applyLevel();
-      els.sampleSelect.innerHTML=`<option value="${run.sample_id}">${hubSample.name_de}</option>`;
-      els.sampleSelect.disabled=true;
-      els.sampleInfo.textContent=hubSample.description_de;
-      if(els.modeLabel) els.modeLabel.textContent="Analytik-Hub";
-      els.bridgeSampleLabel.textContent=`${hubSample.name_de} · ${run.sample_id}`;
-      els.bridgeRunLabel.textContent=run.run_id;
-      els.bridgeAcceptBtn.disabled=true;
-      els.bridgeAcceptBtn.addEventListener("click",sendBridgeResult);
+      if(bridgeInput.mode==="targeted_confirmation"){
+        verificationMode=true;
+        initVerificationMode();
+      }else{
+        els.levelSelect.value="method";
+        els.levelSelect.disabled=true;
+        applyLevel();
+        els.sampleSelect.innerHTML=`<option value="${run.sample_id}">${hubSample.name_de}</option>`;
+        els.sampleSelect.disabled=true;
+        els.sampleInfo.textContent=hubSample.description_de+" Stoffidentitäten und interne Zusammensetzung bleiben verborgen.";
+        if(els.modeLabel) els.modeLabel.textContent="Analytik-Hub";
+        els.bridgeSampleLabel.textContent=`${hubSample.name_de} · ${run.sample_id}`;
+        els.bridgeRunLabel.textContent=run.run_id;
+        els.bridgeAcceptBtn.disabled=true;
+        els.bridgeAcceptBtn.textContent="Run an Hub übernehmen";
+        els.bridgeAcceptBtn.addEventListener("click",sendBridgeResult);
+        setBridgeBanner(bridgeInput.note || "Entwickle eine GC-Methode mit ausreichender Trennung.");
+      }
       els.bridgeReturnBtn.addEventListener("click",()=>window.AnalytikBridge.returnToHub(bridgeRun));
-      setBridgeBanner(bridgeInput.note || "Entwickle eine GC-Methode mit ausreichender Trennung.");
     }catch(err){
       setBridgeBanner("Hub-Verbindung fehlgeschlagen: "+err.message,true);
       els.runBtn.disabled=true;
     }
+  }
+
+  function flowKeyForValue(value){
+    const target=Number(value);
+    return Object.keys(FLOW).reduce((best,key)=>
+      Math.abs(FLOW[key].value-target)<Math.abs(FLOW[best].value-target)?key:best,"medium");
+  }
+
+  function verificationMethodFromInput(){
+    const src=bridgeInput?.source_gc_method||{};
+    return {
+      column_id:src.column_id||src.column||"COLUMN_NP",
+      length_m:Number(src.length_m??src.column_length_m??30),
+      temperature_c:Number(src.temperature_c??100),
+      flow_key:src.flow_key||flowKeyForValue(src.flow_ml_min??1.2),
+      flow_ml_min:Number(src.flow_ml_min??FLOW[src.flow_key||"medium"]?.value??1.2)
+    };
+  }
+
+  function setMethodControls(m){
+    els.columnSelect.value=m.column_id;
+    els.lengthSelect.value=String(m.length_m);
+    els.temperatureSelect.value=String(m.temperature_c);
+    els.flowSelect.value=m.flow_key;
+    [els.columnSelect,els.lengthSelect,els.temperatureSelect,els.flowSelect,els.levelSelect].forEach(x=>x.disabled=true);
+    els.columnInfo.textContent=currentColumn().description_de;
+  }
+
+  function initVerificationMode(){
+    const hypothesisId=bridgeInput.hypothesis_substance_id;
+    const hypothesis=substance(hypothesisId);
+    if(!hypothesis) throw new Error("Der Referenzstandard ist im GC-LAB nicht kuratiert.");
+
+    const m=verificationMethodFromInput();
+    verificationOriginalRun=simulate(hubSample,m);
+
+    els.levelSelect.value="method";
+    setMethodControls(m);
+    els.sampleSelect.innerHTML=`<option value="${bridgeRun.sample_id}">${hubSample.name_de}</option>`;
+    els.sampleSelect.disabled=true;
+    els.sampleInfo.textContent="Ausgangsprobe aus dem ursprünglichen GC-Lauf; für die Bestätigung werden exakt dieselben chromatographischen Bedingungen verwendet.";
+    els.runBtn.style.display="none";
+    els.resetBtn.style.display="none";
+    els.verificationPanel.classList.add("active");
+    if(els.modeLabel) els.modeLabel.textContent="Analytik-Hub · Bestätigung";
+
+    const p=bridgeInput.source_peak||{};
+    els.verificationHypothesis.textContent=bridgeInput.hypothesis_name_de||hypothesis.name_de;
+    els.verificationPeak.textContent=`${p.peak_id||bridgeRun.peak_id||"Peak"} · tR ${fmt(p.retention_time_min,2)} min`;
+    els.verificationMethod.textContent=`${m.column_id==="COLUMN_NP"?"unpolare":"polare"} Säule · ${m.length_m} m · ${m.temperature_c} °C · ${FLOW[m.flow_key].label} (${fmt(m.flow_ml_min,1)} mL/min)`;
+
+    els.bridgeSampleLabel.textContent=`${hubSample.name_de} · ${bridgeRun.sample_id}`;
+    els.bridgeRunLabel.textContent=bridgeRun.run_id;
+    els.bridgeAcceptBtn.textContent="Identität an Hub bestätigen";
+    els.bridgeAcceptBtn.disabled=true;
+    els.bridgeAcceptBtn.addEventListener("click",sendVerificationResult);
+    els.standardRunBtn.disabled=false;
+    els.spikeRunBtn.disabled=true;
+    setBridgeBanner("Gezielte chromatographische Bestätigung: zuerst Referenzstandard, danach Aufstockung derselben Probe.");
+    renderVerificationOriginal();
+  }
+
+  function renderVerificationOriginal(){
+    lastRun=verificationOriginalRun;
+    renderRunMetricsOnly(verificationOriginalRun);
+    drawChromatogram(verificationOriginalRun);
+    els.runStatus.textContent="Original-GC rekonstruiert";
+    setFeedback("Ausgangslauf rekonstruiert. Messe jetzt den gezielten Referenzstandard unter exakt denselben Bedingungen.","neutral");
+    els.verificationLegend.textContent="Ausgangsprobe · ursprüngliche Peaklage als Bezug";
+  }
+
+  function renderRunMetricsOnly(run){
+    els.runtimeMetric.textContent=`${fmt(run.runtime,2)} min`;
+    els.peakCountMetric.textContent=String(run.analytes.length);
+    els.rsMetric.textContent=run.minRs===null?"–":fmt(run.minRs,2);
+    els.qualityMetric.textContent=run.quality.label;
+    els.peakTable.innerHTML=run.analytes.map(a=>`<tr><td>${a.peakId}</td><td>${fmt(a.tr,2)}</td><td>${fmt(a.areaPercent,1)}</td><td>${fmt(a.width,2)}</td></tr>`).join("");
+  }
+
+  function sourcePeak(){ return bridgeInput?.source_peak||{}; }
+
+  function rtTolerance(){
+    const width=Number(sourcePeak().width_min);
+    return Math.max(0.03,Number.isFinite(width)?width*0.25:0.03);
+  }
+
+  function targetAnalyte(run){
+    return run?.analytes?.find(a=>a.substance.id===bridgeInput.hypothesis_substance_id)||null;
+  }
+
+  function runVerificationStandard(){
+    const standard={
+      id:"STD_CONFIRM",
+      name_de:"Referenzstandard "+(bridgeInput.hypothesis_name_de||bridgeInput.hypothesis_substance_id),
+      description_de:"Gezielter Referenzstandard zur Bestätigung der spektroskopisch gestützten Hypothese.",
+      composition:[{substance_id:bridgeInput.hypothesis_substance_id,fraction:1}]
+    };
+    verificationStandardRun=simulate(standard,verificationMethodFromInput());
+    const a=verificationStandardRun.analytes[0];
+    const sourceTr=Number(sourcePeak().retention_time_min);
+    const delta=Math.abs(a.tr-sourceTr);
+    verificationEvidence.standard=delta<=rtTolerance();
+    verificationEvidence.standardDelta=delta;
+    verificationEvidence.standardTr=a.tr;
+
+    drawVerificationOverlay(verificationOriginalRun,verificationStandardRun,"Referenzstandard");
+    renderRunMetricsOnly(verificationStandardRun);
+    els.runStatus.textContent="Referenzstandard gemessen";
+    els.standardEvidence.className="verification-evidence "+(verificationEvidence.standard?"good":"bad");
+    els.standardEvidence.innerHTML=verificationEvidence.standard
+      ? `<strong>✓ Retentionszeit stimmt überein</strong><span>Standard: ${fmt(a.tr,2)} min · Zielpeak: ${fmt(sourceTr,2)} min · Δt = ${fmt(delta,3)} min</span>`
+      : `<strong>✕ Retentionszeit passt nicht</strong><span>Δt = ${fmt(delta,3)} min</span>`;
+    els.spikeRunBtn.disabled=!verificationEvidence.standard;
+    updateVerificationAccept();
+  }
+
+  function spikedSample(){
+    const spike=Number(bridgeInput.spike_amount_model??0.35);
+    const composition=hubSample.composition.map(x=>({substance_id:x.substance_id,fraction:x.fraction}));
+    const existing=composition.find(x=>x.substance_id===bridgeInput.hypothesis_substance_id);
+    if(existing) existing.fraction+=spike;
+    else composition.push({substance_id:bridgeInput.hypothesis_substance_id,fraction:spike});
+    return {id:"SPIKED_SAMPLE",name_de:hubSample.name_de+" + Referenzstandard",description_de:"Aufgestockte Probe",composition};
+  }
+
+  function runVerificationSpike(){
+    verificationSpikeRun=simulate(spikedSample(),verificationMethodFromInput());
+    const before=targetAnalyte(verificationOriginalRun);
+    const after=targetAnalyte(verificationSpikeRun);
+    const sourceTr=Number(sourcePeak().retention_time_min);
+    const sameRt=!!after && Math.abs(after.tr-sourceTr)<=rtTolerance();
+    const growth=before&&after ? 100*(after.responseArea/before.responseArea-1) : 0;
+    const originalIds=new Set(verificationOriginalRun.analytes.map(a=>a.substance.id));
+    const noNew=verificationSpikeRun.analytes.every(a=>originalIds.has(a.substance.id));
+    verificationEvidence.spike=!!(sameRt && noNew && growth>=15);
+    verificationEvidence.spikeGrowth=growth;
+    verificationEvidence.spikeTr=after?.tr??null;
+    verificationEvidence.noNewPeak=noNew;
+
+    drawVerificationOverlay(verificationOriginalRun,verificationSpikeRun,"aufgestockte Probe");
+    renderRunMetricsOnly(verificationSpikeRun);
+    els.runStatus.textContent="Aufstockung gemessen";
+    els.spikeEvidence.className="verification-evidence "+(verificationEvidence.spike?"good":"bad");
+    els.spikeEvidence.innerHTML=verificationEvidence.spike
+      ? `<strong>✓ Vorhandener Peak wird größer – kein neuer Peak</strong><span>Signalantwort am Zielpeak: +${fmt(growth,0)} % · tR ${fmt(after.tr,2)} min</span>`
+      : `<strong>✕ Aufstockung bestätigt die Hypothese nicht eindeutig</strong><span>Peakwachstum ${fmt(growth,0)} % · neuer Peak: ${noNew?"nein":"ja"}</span>`;
+    updateVerificationAccept();
+  }
+
+  function drawVerificationOverlay(original,comparison,label){
+    const canvas=els.chromCanvas,ctx=canvas.getContext("2d");
+    const xMax=Math.max(original.runtime,comparison.runtime);
+    const maxY=Math.max(...original.points.map(p=>p.y),...comparison.points.map(p=>p.y),1e-6)*1.12;
+    drawAxes(ctx,canvas,xMax,maxY);
+    const pad={l:72,r:24,t:25,b:55},w=canvas.width-pad.l-pad.r,h=canvas.height-pad.t-pad.b;
+
+    function trace(run,stroke,width,dash){
+      ctx.strokeStyle=stroke;ctx.lineWidth=width;ctx.setLineDash(dash);ctx.beginPath();
+      run.points.forEach((p,i)=>{
+        const x=pad.l+w*p.t/xMax,y=pad.t+h-h*p.y/maxY;
+        if(i===0)ctx.moveTo(x,y);else ctx.lineTo(x,y);
+      });
+      ctx.stroke();ctx.setLineDash([]);
+    }
+    trace(original,"rgba(210,225,240,.55)",2,[7,5]);
+    trace(comparison,"#54d2df",2.8,[]);
+
+    const sourceTr=Number(sourcePeak().retention_time_min);
+    if(Number.isFinite(sourceTr)){
+      const x=pad.l+w*sourceTr/xMax;
+      ctx.strokeStyle="#f5c66a";ctx.lineWidth=2;ctx.setLineDash([4,4]);ctx.beginPath();ctx.moveTo(x,pad.t);ctx.lineTo(x,pad.t+h);ctx.stroke();ctx.setLineDash([]);
+      ctx.fillStyle="#f5d58a";ctx.font="bold 13px system-ui";ctx.textAlign="center";ctx.fillText(sourcePeak().peak_id||bridgeRun.peak_id||"Ziel",x,pad.t+17);ctx.textAlign="left";
+    }
+    els.verificationLegend.textContent=`gestrichelt: Ausgangsprobe · türkis: ${label} · gelb: Zielpeak`;
+  }
+
+  function updateVerificationAccept(){
+    const ready=verificationEvidence.standard&&verificationEvidence.spike;
+    els.bridgeAcceptBtn.disabled=!ready;
+    if(ready) setBridgeBanner("Beide Belege erfüllt: Retentionszeit des Standards stimmt überein und die Aufstockung vergrößert denselben Peak ohne neuen Peak.");
+  }
+
+  function sendVerificationResult(){
+    if(!verificationMode||!bridgeRun||!window.AnalytikBridge||!verificationEvidence.standard||!verificationEvidence.spike) return;
+    const result={
+      result_id:"RES_"+Date.now()+"_"+Math.random().toString(36).slice(2,7),
+      run_id:bridgeRun.run_id,
+      case_id:bridgeRun.case_id,
+      sample_id:bridgeRun.sample_id,
+      app_id:"GC_LAB",
+      app_version:VERSION,
+      analysis_type:"GC_CONFIRMATION",
+      status:"completed",
+      source:"app",
+      source_result_id:bridgeRun.source_result_id||bridgeInput.source_result_id||null,
+      peak_id:bridgeRun.peak_id||sourcePeak().peak_id||null,
+      measurement:{
+        source_peak_retention_time_min:Number(sourcePeak().retention_time_min),
+        reference_standard:{
+          substance_id:bridgeInput.hypothesis_substance_id,
+          retention_time_min:Number(verificationEvidence.standardTr.toFixed(4)),
+          delta_t_min:Number(verificationEvidence.standardDelta.toFixed(4))
+        },
+        spiking:{
+          target_retention_time_min:Number(verificationEvidence.spikeTr.toFixed(4)),
+          response_growth_percent:Number(verificationEvidence.spikeGrowth.toFixed(1)),
+          new_peak_observed:!verificationEvidence.noNewPeak
+        }
+      },
+      evaluation:{
+        identity_status:"confirmed",
+        confirmed_substance_id:bridgeInput.hypothesis_substance_id,
+        confirmed_name_de:bridgeInput.hypothesis_name_de||substance(bridgeInput.hypothesis_substance_id)?.name_de||null,
+        evidence:{reference_retention_match:true,spiking_same_peak_growth:true,no_new_peak:true}
+      },
+      created_at:new Date().toISOString()
+    };
+    const completed=window.AnalytikBridge.completeRun(bridgeRun.run_id,result);
+    window.AnalytikBridge.returnToHub(completed);
   }
 
   function sendBridgeResult(){

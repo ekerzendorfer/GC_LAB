@@ -1,6 +1,6 @@
 # GC-LAB
 
-**Version:** v0.1.2 – Runtime-Fraktionen aus dem Analytik-Hub  
+**Version:** v0.2.0 – gezielte Identitätsbestätigung mit Standard und Aufstockung  
 **Projekt:** CHEMIE mit KI – Digitales Analytiklabor
 
 Browserbasiertes virtuelles Gaschromatographie-Labor ohne Build-Prozess und ohne Backend.
@@ -94,3 +94,20 @@ Das Fraktionsvolumen beeinflusst die GC-Peakfläche nicht direkt; jede GC-Messun
 ### Einzelpeak-Regel
 
 Die Auflösung `R_s` ist nur zwischen mindestens zwei Peaks definiert. Eine nahezu reine Destillationsfraktion kann daher einen einzigen detektierbaren Peak liefern. Ein solcher Lauf ist als GC-Messung gültig und darf an den Hub zurückgegeben werden; die Stoffidentität bleibt dennoch unbekannt. Bei zwei oder mehr Peaks gilt weiterhin die Mindestauflösung `R_s ≥ 1,5`.
+
+
+## v0.2.0 – Referenzstandard und Aufstockung
+
+Nach einer spektroskopisch gestützten Strukturhypothese kann GC-LAB in einem gezielten Bestätigungsmodus erneut aus dem Analytik-Hub gestartet werden.
+
+Der Bestätigungsmodus:
+- übernimmt exakt die Methode des ursprünglichen GC-Laufs und sperrt deren Parameter
+- rekonstruiert den Ausgangslauf als Bezug
+- misst nur den bereits begründeten Referenzstandard; kein Trial-and-Error mit Standards
+- prüft die Übereinstimmung der Retentionszeit
+- führt anschließend eine modellierte Aufstockung derselben Probe mit diesem Standard durch
+- bestätigt, dass derselbe Peak an derselben Retentionszeit wächst und kein zusätzlicher Peak entsteht
+- verwendet für das Peakwachstum die absolute modellierte Detektorantwort, sodass auch ein 100-%-Einzelpeak sinnvoll geprüft werden kann
+- gibt erst nach beiden Belegen ein GC_CONFIRMATION-RESULT mit identity_status: confirmed an den Hub zurück
+
+Die Aufstockung ist ein didaktisches Modell und keine quantitative Standardadditionsmethode.

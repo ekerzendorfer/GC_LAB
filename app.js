@@ -67,7 +67,7 @@
       "runtimeMetric","peakCountMetric","rsMetric","qualityMetric","peakTable","historyTable",
       "bridgeContext","bridgeSampleLabel","bridgeRunLabel","bridgeMessage","bridgeAcceptBtn","bridgeReturnBtn","modeLabel",
       "verificationPanel","verificationHypothesis","verificationPeak","verificationMethod","standardRunBtn","spikeRunBtn",
-      "standardEvidence","spikeEvidence","verificationLegend"]
+      "standardEvidence","spikeEvidence","verificationLegend","verificationZoomCanvas","verificationZoomLegend"]
       .forEach(id => els[id] = document.getElementById(id));
   }
 
@@ -418,6 +418,7 @@
     els.runStatus.textContent="Original-GC rekonstruiert";
     setFeedback("Ausgangslauf rekonstruiert. Messe jetzt den gezielten Referenzstandard unter exakt denselben Bedingungen.","neutral");
     els.verificationLegend.textContent="Ausgangsprobe · ursprüngliche Peaklage als Bezug";
+    drawVerificationTargetZoom(verificationRunsForMode("original"),"original");
   }
 
   function renderRunMetricsOnly(run){
@@ -439,12 +440,27 @@
     return run?.analytes?.find(a=>a.substance.id===bridgeInput.hypothesis_substance_id)||null;
   }
 
+  function verificationStandardRatio(){
+    const r=Number(bridgeInput?.verification_standard_ratio??0.60);
+    return Number.isFinite(r)&&r>0?r:0.60;
+  }
+
+  function originalTargetAnalyte(){
+    return targetAnalyte(verificationOriginalRun);
+  }
+
   function runVerificationStandard(){
+    const before=originalTargetAnalyte();
+    if(!before){
+      setFeedback("Der Zielpeak ist in der rekonstruierten Ausgangsprobe nicht vorhanden.","bad");
+      return;
+    }
+    const ratio=verificationStandardRatio();
     const standard={
       id:"STD_CONFIRM",
       name_de:"Referenzstandard "+(bridgeInput.hypothesis_name_de||bridgeInput.hypothesis_substance_id),
       description_de:"Gezielter Referenzstandard zur Bestätigung der spektroskopisch gestützten Hypothese.",
-      composition:[{substance_id:bridgeInput.hypothesis_substance_id,fraction:1}]
+      composition:[{substance_id:bridgeInput.hypothesis_substance_id,fraction:before.fraction*ratio}]
     };
     verificationStandardRun=simulate(standard,verificationMethodFromInput());
     const a=verificationStandardRun.analytes[0];
@@ -454,7 +470,7 @@
     verificationEvidence.standardDelta=delta;
     verificationEvidence.standardTr=a.tr;
 
-    drawVerificationOverlay(verificationOriginalRun,verificationStandardRun,"Referenzstandard");
+    drawVerificationComparison("standard");
     renderRunMetricsOnly(verificationStandardRun);
     els.runStatus.textContent="Referenzstandard gemessen";
     els.standardEvidence.className="verification-evidence "+(verificationEvidence.standard?"good":"bad");
@@ -462,15 +478,23 @@
       ? `<strong>✓ Retentionszeit stimmt überein</strong><span>Standard: ${fmt(a.tr,2)} min · Zielpeak: ${fmt(sourceTr,2)} min · Δt = ${fmt(delta,3)} min</span>`
       : `<strong>✕ Retentionszeit passt nicht</strong><span>Δt = ${fmt(delta,3)} min</span>`;
     els.spikeRunBtn.disabled=!verificationEvidence.standard;
+    setFeedback(
+      verificationEvidence.standard
+        ? "Referenzstandard gemessen: Die Retentionszeit stimmt mit dem Zielpeak überein. Die geringere Peakhöhe ist beabsichtigt; für die Identifikation zählt hier die Peaklage."
+        : "Die Retentionszeit des Referenzstandards passt nicht zum Zielpeak.",
+      verificationEvidence.standard?"good":"bad"
+    );
     updateVerificationAccept();
   }
-
   function spikedSample(){
-    const spike=Number(bridgeInput.spike_amount_model??0.35);
+    const ratio=verificationStandardRatio();
+    const before=originalTargetAnalyte();
+    if(!before) throw new Error("Zielsubstanz fehlt in der Ausgangsprobe.");
+    const addition=before.fraction*ratio;
     const composition=hubSample.composition.map(x=>({substance_id:x.substance_id,fraction:x.fraction}));
     const existing=composition.find(x=>x.substance_id===bridgeInput.hypothesis_substance_id);
-    if(existing) existing.fraction+=spike;
-    else composition.push({substance_id:bridgeInput.hypothesis_substance_id,fraction:spike});
+    if(existing) existing.fraction+=addition;
+    else composition.push({substance_id:bridgeInput.hypothesis_substance_id,fraction:addition});
     return {id:"SPIKED_SAMPLE",name_de:hubSample.name_de+" + Referenzstandard",description_de:"Aufgestockte Probe",composition};
   }
 
@@ -488,41 +512,96 @@
     verificationEvidence.spikeTr=after?.tr??null;
     verificationEvidence.noNewPeak=noNew;
 
-    drawVerificationOverlay(verificationOriginalRun,verificationSpikeRun,"aufgestockte Probe");
+    drawVerificationComparison("spike");
     renderRunMetricsOnly(verificationSpikeRun);
     els.runStatus.textContent="Aufstockung gemessen";
     els.spikeEvidence.className="verification-evidence "+(verificationEvidence.spike?"good":"bad");
     els.spikeEvidence.innerHTML=verificationEvidence.spike
       ? `<strong>✓ Vorhandener Peak wird größer – kein neuer Peak</strong><span>Signalantwort am Zielpeak: +${fmt(growth,0)} % · tR ${fmt(after.tr,2)} min</span>`
       : `<strong>✕ Aufstockung bestätigt die Hypothese nicht eindeutig</strong><span>Peakwachstum ${fmt(growth,0)} % · neuer Peak: ${noNew?"nein":"ja"}</span>`;
+    setFeedback(
+      verificationEvidence.spike
+        ? "Aufstockung gemessen: Die dritte Kurve zeigt am Zielpeak einen höheren Ausschlag, während die übrigen Peaks an ihrer Position bleiben."
+        : "Die Aufstockung liefert noch keinen eindeutigen Bestätigungsbefund.",
+      verificationEvidence.spike?"good":"bad"
+    );
     updateVerificationAccept();
   }
 
-  function drawVerificationOverlay(original,comparison,label){
+  function verificationRunsForMode(mode){
+    const runs=[{run:verificationOriginalRun,label:"Ausgangsprobe",stroke:"rgba(210,225,240,.58)",width:2,dash:[7,5]}];
+    if(verificationStandardRun) runs.push({run:verificationStandardRun,label:"Referenzstandard",stroke:"#a78bfa",width:2.8,dash:[]});
+    if(mode==="spike"&&verificationSpikeRun) runs.push({run:verificationSpikeRun,label:"aufgestockte Probe",stroke:"#54d2df",width:3.1,dash:[]});
+    return runs;
+  }
+
+  function drawVerificationComparison(mode){
+    const traces=verificationRunsForMode(mode);
     const canvas=els.chromCanvas,ctx=canvas.getContext("2d");
-    const xMax=Math.max(original.runtime,comparison.runtime);
-    const maxY=Math.max(...original.points.map(p=>p.y),...comparison.points.map(p=>p.y),1e-6)*1.12;
+    const xMax=Math.max(...traces.map(x=>x.run.runtime));
+    const maxY=Math.max(...traces.flatMap(x=>x.run.points.map(p=>p.y)),1e-6)*1.12;
     drawAxes(ctx,canvas,xMax,maxY);
     const pad={l:72,r:24,t:25,b:55},w=canvas.width-pad.l-pad.r,h=canvas.height-pad.t-pad.b;
 
-    function trace(run,stroke,width,dash){
-      ctx.strokeStyle=stroke;ctx.lineWidth=width;ctx.setLineDash(dash);ctx.beginPath();
-      run.points.forEach((p,i)=>{
-        const x=pad.l+w*p.t/xMax,y=pad.t+h-h*p.y/maxY;
-        if(i===0)ctx.moveTo(x,y);else ctx.lineTo(x,y);
-      });
-      ctx.stroke();ctx.setLineDash([]);
-    }
-    trace(original,"rgba(210,225,240,.55)",2,[7,5]);
-    trace(comparison,"#54d2df",2.8,[]);
+    traces.forEach(t=>drawTrace(ctx,t.run,xMax,maxY,pad,w,h,t.stroke,t.width,t.dash));
 
     const sourceTr=Number(sourcePeak().retention_time_min);
     if(Number.isFinite(sourceTr)){
       const x=pad.l+w*sourceTr/xMax;
-      ctx.strokeStyle="#f5c66a";ctx.lineWidth=2;ctx.setLineDash([4,4]);ctx.beginPath();ctx.moveTo(x,pad.t);ctx.lineTo(x,pad.t+h);ctx.stroke();ctx.setLineDash([]);
+      ctx.strokeStyle="#f5c66a";ctx.lineWidth=1.6;ctx.setLineDash([3,4]);ctx.beginPath();ctx.moveTo(x,pad.t);ctx.lineTo(x,pad.t+h);ctx.stroke();ctx.setLineDash([]);
       ctx.fillStyle="#f5d58a";ctx.font="bold 13px system-ui";ctx.textAlign="center";ctx.fillText(sourcePeak().peak_id||bridgeRun.peak_id||"Ziel",x,pad.t+17);ctx.textAlign="left";
     }
-    els.verificationLegend.textContent=`gestrichelt: Ausgangsprobe · türkis: ${label} · gelb: Zielpeak`;
+
+    els.verificationLegend.textContent=mode==="spike"
+      ? "grau gestrichelt: Ausgangsprobe · violett: Referenzstandard · türkis: aufgestockte Probe · gelb: Zielpeak"
+      : "grau gestrichelt: Ausgangsprobe · violett: Referenzstandard · gelb: Zielpeak";
+
+    drawVerificationTargetZoom(traces,mode);
+  }
+
+  function drawTrace(ctx,run,xMax,maxY,pad,w,h,stroke,width,dash){
+    ctx.strokeStyle=stroke;ctx.lineWidth=width;ctx.setLineDash(dash||[]);ctx.beginPath();
+    run.points.forEach((p,i)=>{
+      const x=pad.l+w*p.t/xMax,y=pad.t+h-h*p.y/maxY;
+      if(i===0)ctx.moveTo(x,y);else ctx.lineTo(x,y);
+    });
+    ctx.stroke();ctx.setLineDash([]);
+  }
+
+  function drawVerificationTargetZoom(traces,mode){
+    const canvas=els.verificationZoomCanvas,ctx=canvas.getContext("2d");
+    const center=Number(sourcePeak().retention_time_min);
+    const width0=Number(sourcePeak().width_min);
+    const half=Math.max(0.18,Number.isFinite(width0)?width0*1.5:0.22);
+    const xMin=Math.max(0,center-half),xMax=center+half;
+    const pad={l:58,r:18,t:22,b:38},w=canvas.width-pad.l-pad.r,h=canvas.height-pad.t-pad.b;
+
+    const localMax=Math.max(...traces.flatMap(t=>t.run.points.filter(p=>p.t>=xMin&&p.t<=xMax).map(p=>p.y)),1e-6)*1.15;
+    ctx.fillStyle="#07101c";ctx.fillRect(0,0,canvas.width,canvas.height);
+    ctx.strokeStyle="#2b415f";ctx.lineWidth=1;
+    for(let i=0;i<=4;i++){
+      const x=pad.l+w*i/4;ctx.beginPath();ctx.moveTo(x,pad.t);ctx.lineTo(x,pad.t+h);ctx.stroke();
+      ctx.fillStyle="#8ea4bd";ctx.font="11px system-ui";ctx.textAlign="center";ctx.fillText(fmt(xMin+(xMax-xMin)*i/4,2),x,pad.t+h+17);
+    }
+    for(let i=0;i<=3;i++){
+      const y=pad.t+h-h*i/3;ctx.beginPath();ctx.moveTo(pad.l,y);ctx.lineTo(pad.l+w,y);ctx.stroke();
+    }
+    traces.forEach(t=>{
+      ctx.strokeStyle=t.stroke;ctx.lineWidth=t.width;ctx.setLineDash(t.dash||[]);ctx.beginPath();
+      let begun=false;
+      t.run.points.forEach(p=>{
+        if(p.t<xMin||p.t>xMax) return;
+        const x=pad.l+w*(p.t-xMin)/(xMax-xMin),y=pad.t+h-h*p.y/localMax;
+        if(!begun){ctx.moveTo(x,y);begun=true;}else ctx.lineTo(x,y);
+      });
+      ctx.stroke();ctx.setLineDash([]);
+    });
+    const tx=pad.l+w*(center-xMin)/(xMax-xMin);
+    ctx.strokeStyle="#f5c66a";ctx.lineWidth=1.5;ctx.setLineDash([3,4]);ctx.beginPath();ctx.moveTo(tx,pad.t);ctx.lineTo(tx,pad.t+h);ctx.stroke();ctx.setLineDash([]);
+    ctx.textAlign="left";
+    els.verificationZoomLegend.textContent=mode==="spike"
+      ? "Zielpeak vergrößert: Standard < Ausgangsprobe < aufgestockte Probe."
+      : "Zielpeak vergrößert: Standard bewusst niedriger dosiert; Peaklage ist entscheidend.";
   }
 
   function updateVerificationAccept(){

@@ -1,6 +1,6 @@
 # GC-LAB
 
-**Version:** v0.2.0 – gezielte Identitätsbestätigung mit Standard und Aufstockung  
+**Version:** v0.3.0 – Single-Mode-Ausbau und zeitlich wachsendes Chromatogramm  
 **Projekt:** CHEMIE mit KI – Digitales Analytiklabor
 
 Browserbasiertes virtuelles Gaschromatographie-Labor ohne Build-Prozess und ohne Backend.
@@ -111,3 +111,45 @@ Der Bestätigungsmodus:
 - gibt erst nach beiden Belegen ein GC_CONFIRMATION-RESULT mit identity_status: confirmed an den Hub zurück
 
 Die Aufstockung ist ein didaktisches Modell und keine quantitative Standardadditionsmethode.
+
+
+## v0.3.0 – eigenständiges Methodenlabor
+
+Der nach der Hub-Entwicklung fachlich stabile GC-Kern wurde für den direkten Unterrichtseinsatz erweitert.
+
+### Sechs kuratierte Mischproben
+
+Bestehend:
+- Ethylacetat / 1-Butanol (50 : 50)
+- n-Hexan / Toluol (50 : 50)
+- Aceton / Ethanol / Toluol (35 : 35 : 30)
+
+Neu:
+- Methanol / Ethanol / 1-Butanol (33 : 34 : 33) – homologe Alkoholreihe
+- Aceton / Ethanol / Ethylacetat (34 : 33 : 33) – Selektivität und mögliche Änderung der Elutionsreihenfolge
+- n-Hexan / Cyclohexan / Toluol (34 : 33 : 33) – unpolares Dreikomponentengemisch
+
+Im Grundmodus werden bewusst nur Zweikomponentenproben angeboten. Im Modus Methodenentwicklung stehen alle sechs Proben zur Verfügung.
+
+### Zeitlich wachsendes Chromatogramm
+
+Ein GC-Lauf erscheint nicht mehr zwingend sofort vollständig. Drei Darstellungsmodi sind verfügbar:
+
+- **Beobachten · 12×** – Standard; ein typischer Lauf entsteht über mehrere Bildschirmsekunden
+- **Schnell · 60×** – für wiederholte Methodenoptimierung
+- **Sofort · Ergebnisansicht** – für gezielte Vergleiche ohne Wartezeit
+
+Wichtig: Die x-Achse zeigt immer die chromatographische Modellzeit. 12× bzw. 60× beschleunigt ausschließlich die Bildschirmdarstellung und verändert weder Retentionszeiten noch Auflösung oder Peakflächen.
+
+Während des laufenden Chromatogramms:
+- wächst nur das Detektorsignal bis zur aktuellen chromatographischen Zeit,
+- zeigt ein Zeitcursor die aktuelle Position,
+- bleiben Peakzahl, Rₛ, Qualitätsbewertung und Peak-Tabelle zunächst verborgen.
+
+Erst nach Erreichen der vollständigen Laufzeit erscheint die Auswertung. Damit wird sichtbar, dass GC eine zeitabhängige Trenn- und Messmethode ist und kein sofortiger „Knopfdruck-Test“.
+
+### Betriebsmodi
+
+Die Hub-Anbindung und die gezielte Bestätigung mit Referenzstandard/Aufstockung bleiben fachlich unverändert. Die neue Messdarstellung ändert keine Simulationsparameter und keine RESULT-Struktur.
+
+Leichte Basislinienunruhe oder Peak-Asymmetrie sind bewusst noch nicht Bestandteil von v0.3.0. Die idealisierten Gaußpeaks bleiben für die quantitative und didaktische Auswertung zunächst erhalten.

@@ -1,5 +1,5 @@
 {
-  "schema_version": "0.3.1",
+  "schema_version": "0.3.2",
   "samples": [
     {
       "id": "SAMPLE_EA_BUOH_50",
@@ -132,6 +132,33 @@
       "candidate_pool": [
         "HEXANE",
         "CYCLOHEXANE",
+        "TOLUENE"
+      ]
+    },
+    {
+      "id": "GC_U01",
+      "name_de": "GC-U01 · unbekannte Mischprobe",
+      "description_de": "Unbekannte flüchtige Mischprobe mit drei Komponenten. Entwickle zuerst eine ausreichend trennende Methode und identifiziere anschließend die Peaks mit Referenzstandards.",
+      "unknown": true,
+      "composition": [
+        {
+          "substance_id": "ACETONE",
+          "fraction": 0.34
+        },
+        {
+          "substance_id": "ETHANOL",
+          "fraction": 0.33
+        },
+        {
+          "substance_id": "ETHYL_ACETATE",
+          "fraction": 0.33
+        }
+      ],
+      "candidate_pool": [
+        "ACETONE",
+        "METHANOL",
+        "ETHANOL",
+        "ETHYL_ACETATE",
         "TOLUENE"
       ]
     }

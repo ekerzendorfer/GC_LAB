@@ -276,16 +276,65 @@
   }
 
   function runGc(){
+    if(runInProgress) return;
     const run=simulate(currentSample(),method());
+    const displayKey=els.displaySpeedSelect?.value || "observe";
+    const display=DISPLAY_SPEED[displayKey] || DISPLAY_SPEED.observe;
+
+    lastRun=null;
+    updateBridgeAccept(null);
+
+    if(!Number.isFinite(display.factor)){
+      completeGcRun(run);
+      return;
+    }
+
+    runInProgress=true;
+    setRunControlsLocked(true);
+    els.runStatus.className="status-pill running";
+    els.runStatus.textContent="Messung läuft · 0,00 min";
+    els.runtimeMetric.textContent="0,00 / "+fmt(run.runtime,2)+" min";
+    els.peakCountMetric.textContent="…";
+    els.rsMetric.textContent="…";
+    els.qualityMetric.textContent="Messung läuft";
+    els.peakTable.innerHTML='<tr><td colspan="4" class="muted">Detektorsignal wird aufgezeichnet – Auswertung nach Laufende.</td></tr>';
+    setFeedback("Probe injiziert. Das Chromatogramm entsteht entlang der chromatographischen Zeitachse. Bildschirmdarstellung: "+display.label+".","neutral");
+    drawChromatogramProgress(run,0);
+
+    const token=++animationSequence;
+    const startedAt=performance.now();
+
+    const step=now=>{
+      if(token!==animationSequence) return;
+      const elapsedSeconds=(now-startedAt)/1000;
+      const currentTime=Math.min(run.runtime,elapsedSeconds*display.factor/60);
+      drawChromatogramProgress(run,currentTime);
+      els.runStatus.textContent="Messung läuft · "+fmt(currentTime,2)+" min";
+      els.runtimeMetric.textContent=fmt(currentTime,2)+" / "+fmt(run.runtime,2)+" min";
+
+      if(currentTime>=run.runtime){
+        activeRunAnimation=null;
+        completeGcRun(run);
+        return;
+      }
+      activeRunAnimation=requestAnimationFrame(step);
+    };
+    activeRunAnimation=requestAnimationFrame(step);
+  }
+
+  function completeGcRun(run){
+    cancelRunAnimation();
     lastRun=run;
     history.push(run);
     selectedHistoryIndex=history.length-1;
+    setRunControlsLocked(false);
     renderRun(run);
     renderHistory();
   }
 
   function renderRun(run){
     drawChromatogram(run);
+    els.runStatus.className="status-pill";
     els.runStatus.textContent="Lauf abgeschlossen";
     els.runtimeMetric.textContent=`${fmt(run.runtime,2)} min`;
     els.peakCountMetric.textContent=String(run.analytes.length);
@@ -305,6 +354,7 @@
   }
 
   function showHistoryRun(index){
+    if(runInProgress) return;
     const run=history[index];
     if(!run) return;
     selectedHistoryIndex=index;
@@ -771,6 +821,7 @@
   }
 
   function resetMetrics(){
+    els.runStatus.className="status-pill";
     els.runStatus.textContent="bereit";
     [els.runtimeMetric,els.peakCountMetric,els.rsMetric,els.qualityMetric].forEach(e=>e.textContent="–");
     els.peakTable.innerHTML='<tr><td colspan="4" class="muted">Noch kein Lauf.</td></tr>';

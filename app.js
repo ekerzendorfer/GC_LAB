@@ -1,7 +1,7 @@
 (() => {
   "use strict";
 
-  const VERSION = "0.3.1";
+  const VERSION = "0.3.2";
   const FLOW = {
     low: {label:"niedrig", value:0.8, efficiency:0.82},
     medium: {label:"mittel", value:1.2, efficiency:1.00},
@@ -100,8 +100,17 @@
     }
     const current=els.sampleSelect.value;
     const basic=els.levelSelect.value==="basic";
-    const choices=basic ? db.samples.filter(s=>s.composition.length<=2) : db.samples;
-    els.sampleSelect.innerHTML=choices.map(s=>'<option value="'+s.id+'">'+s.name_de+'</option>').join("");
+    const choices=basic ? db.samples.filter(s=>s.composition.length<=2 && !s.unknown) : db.samples;
+
+    if(basic){
+      els.sampleSelect.innerHTML=choices.map(s=>'<option value="'+s.id+'">'+s.name_de+'</option>').join("");
+    }else{
+      const unknown=choices.filter(s=>s.unknown);
+      const learning=choices.filter(s=>!s.unknown);
+      els.sampleSelect.innerHTML=
+        (unknown.length?'<optgroup label="Unbekannte Proben">'+unknown.map(s=>'<option value="'+s.id+'">'+s.name_de+'</option>').join("")+'</optgroup>':"")
+        +(learning.length?'<optgroup label="Lernproben">'+learning.map(s=>'<option value="'+s.id+'">'+s.name_de+'</option>').join("")+'</optgroup>':"");
+    }
     if(choices.some(s=>s.id===current)) els.sampleSelect.value=current;
   }
 
@@ -448,7 +457,10 @@
     const candidates=identificationCandidateIds(run);
     els.identificationPanel.classList.add("active");
     els.identMethodLabel.textContent=identificationMethodLabel(run);
-    els.identIntro.textContent="Die Trennung ist ausreichend (min. Rₛ = "+fmt(run.minRs,2)+"). Referenzstandards werden jetzt unter exakt dieser Methode gemessen. Ordne danach den passenden Probenpeak zu.";
+    const poolCount=candidates.length;
+    els.identIntro.textContent=run.sample.unknown
+      ? "Die Trennung ist ausreichend (min. Rₛ = "+fmt(run.minRs,2)+"). Die Probe enthält "+run.analytes.length+" Komponenten; zur Identifikation stehen "+poolCount+" mögliche Referenzstandards bereit. Nicht jeder Kandidat muss enthalten sein."
+      : "Die Trennung ist ausreichend (min. Rₛ = "+fmt(run.minRs,2)+"). Referenzstandards werden jetzt unter exakt dieser Methode gemessen. Ordne danach den passenden Probenpeak zu.";
 
     els.identStandardButtons.innerHTML=candidates.map(id=>{
       const sub=substance(id);
@@ -492,8 +504,14 @@
     }).join("");
 
     if(identificationComplete(run,state)){
+      const identities=run.analytes.map(a=>{
+        const hit=Object.entries(state.assignments).find(([,peakId])=>peakId===a.peakId);
+        return hit?substance(hit[0]).name_de:null;
+      }).filter(Boolean);
       els.identAssignmentFeedback.className="feedback good";
-      els.identAssignmentFeedback.textContent="Chromatogramm vollständig entziffert: Alle Probenpeaks sind durch Referenzläufe zugeordnet.";
+      els.identAssignmentFeedback.textContent=run.sample.unknown
+        ? "GC-U01 vollständig entziffert. Identifizierte Komponenten: "+identities.join(", ")+"."
+        : "Chromatogramm vollständig entziffert: Alle Probenpeaks sind durch Referenzläufe zugeordnet.";
     }else if(!activeId){
       els.identAssignmentFeedback.className="feedback neutral";
       els.identAssignmentFeedback.textContent="Noch keine Peakzuordnung.";

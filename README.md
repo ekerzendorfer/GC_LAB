@@ -1,6 +1,6 @@
 # GC-LAB
 
-**Version:** v0.3.1 – Referenzstandards und Peakzuordnung  
+**Version:** v0.3.2 – erste unbekannte Mischprobe GC-U01  
 **Projekt:** CHEMIE mit KI – Digitales Analytiklabor
 
 Browserbasiertes virtuelles Gaschromatographie-Labor ohne Build-Prozess und ohne Backend.
@@ -24,7 +24,7 @@ Der erste Stand konzentriert sich bewusst auf die fachliche Basis:
 
 ## Noch nicht enthalten
 
-- echte unbekannte Mischproben mit verdeckter Zusammensetzung
+- weitere unbekannte Mischproben mit verdeckter Zusammensetzung
 - frei erweiterbarer Referenzstandard-Pool für zusätzliche Hub-Substanzen
 - Temperaturprogramm
 - quantitative GC-Kalibration
@@ -190,3 +190,39 @@ Dadurch ist der nächste Ausbau vorbereitet:
 Der Single-Mode nutzt Referenzstandards zum systematischen Entziffern eines Chromatogramms.
 
 Der Hub-Bestätigungsmodus bleibt davon getrennt: Dort folgt der gezielte Standard- und Aufstockungsversuch erst auf eine bereits spektroskopisch begründete Strukturhypothese.
+
+
+## v0.3.2 – erste unbekannte Mischprobe GC-U01
+
+Mit `GC-U01` steht erstmals eine echte unbekannte Mischprobe im Single-Mode zur Verfügung.
+
+### Sichtbare Aufgabenstellung
+
+Im UI werden weder Stoffnamen noch Zusammensetzung der Probe angezeigt. Die Probe erscheint nur als:
+
+- **GC-U01 · unbekannte Mischprobe**
+- neutrale Aufgabenbeschreibung ohne Angabe der enthaltenen Komponenten
+
+Die bekannte Zusammensetzung bleibt ausschließlich Teil des internen Simulationsmodells.
+
+### Arbeitsablauf
+
+1. GC-Methode entwickeln
+2. mindestens `R_s ≥ 1,5` erreichen
+3. Chromatogramm mit getrennten Peaks auswerten
+4. Referenzstandards aus einem Kandidatenpool messen
+5. Standards anhand der Retentionszeiten Peaks zuordnen
+6. nicht passende Standards als **kein passender Peak** erkennen
+7. nach vollständiger Zuordnung die enthaltenen Komponenten anzeigen
+
+### Kandidatenpool von GC-U01
+
+Der Referenzpool umfasst fünf kuratierte Stoffe, von denen nur drei tatsächlich in der Probe enthalten sind. Zwei Kandidaten dienen als echte Negativkontrollen.
+
+Die Negativkandidaten wurden über alle Methoden geprüft, mit denen GC-U01 im aktuellen Modell `R_s ≥ 1,5` erreicht. Ihre Retentionszeiten überlappen dabei nicht mit den drei Probenpeaks innerhalb der verwendeten Zuordnungstoleranz.
+
+Damit entsteht keine künstliche Mehrdeutigkeit durch das Simulationsmodell.
+
+### Erweiterbarkeit
+
+GC-U01 ist als erster Prototyp für die weitere Serie `GC-Uxx` gedacht. Der Referenzpool bleibt von der internen Zusammensetzung getrennt. Neue kuratierte Einzelsubstanzen können später ergänzt werden, wenn weitere Single-Mode- oder Analytik-Hub-Proben sie benötigen.

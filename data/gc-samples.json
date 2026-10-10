@@ -1,5 +1,5 @@
 {
-  "schema_version": "0.3.0",
+  "schema_version": "0.3.1",
   "samples": [
     {
       "id": "SAMPLE_EA_BUOH_50",
@@ -14,6 +14,10 @@
           "substance_id": "BUTAN_1_OL",
           "fraction": 0.5
         }
+      ],
+      "candidate_pool": [
+        "ETHYL_ACETATE",
+        "BUTAN_1_OL"
       ]
     },
     {
@@ -29,6 +33,10 @@
           "substance_id": "TOLUENE",
           "fraction": 0.5
         }
+      ],
+      "candidate_pool": [
+        "HEXANE",
+        "TOLUENE"
       ]
     },
     {
@@ -48,6 +56,11 @@
           "substance_id": "TOLUENE",
           "fraction": 0.3
         }
+      ],
+      "candidate_pool": [
+        "ACETONE",
+        "ETHANOL",
+        "TOLUENE"
       ]
     },
     {
@@ -67,6 +80,11 @@
           "substance_id": "BUTAN_1_OL",
           "fraction": 0.33
         }
+      ],
+      "candidate_pool": [
+        "METHANOL",
+        "ETHANOL",
+        "BUTAN_1_OL"
       ]
     },
     {
@@ -86,6 +104,11 @@
           "substance_id": "ETHYL_ACETATE",
           "fraction": 0.33
         }
+      ],
+      "candidate_pool": [
+        "ACETONE",
+        "ETHANOL",
+        "ETHYL_ACETATE"
       ]
     },
     {
@@ -105,6 +128,11 @@
           "substance_id": "TOLUENE",
           "fraction": 0.33
         }
+      ],
+      "candidate_pool": [
+        "HEXANE",
+        "CYCLOHEXANE",
+        "TOLUENE"
       ]
     }
   ]

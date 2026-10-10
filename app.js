@@ -108,8 +108,8 @@
       const unknown=choices.filter(s=>s.unknown);
       const learning=choices.filter(s=>!s.unknown);
       els.sampleSelect.innerHTML=
-        (unknown.length?'<optgroup label="Unbekannte Proben">'+unknown.map(s=>'<option value="'+s.id+'">'+s.name_de+'</option>').join("")+'</optgroup>':"")
-        +(learning.length?'<optgroup label="Lernproben">'+learning.map(s=>'<option value="'+s.id+'">'+s.name_de+'</option>').join("")+'</optgroup>':"");
+        (learning.length?'<optgroup label="Lernproben">'+learning.map(s=>'<option value="'+s.id+'">'+s.name_de+'</option>').join("")+'</optgroup>':"")
+        +(unknown.length?'<optgroup label="Unbekannte Proben">'+unknown.map(s=>'<option value="'+s.id+'">'+s.name_de+'</option>').join("")+'</optgroup>':"");
     }
     if(choices.some(s=>s.id===current)) els.sampleSelect.value=current;
   }
@@ -459,7 +459,7 @@
     els.identMethodLabel.textContent=identificationMethodLabel(run);
     const poolCount=candidates.length;
     els.identIntro.textContent=run.sample.unknown
-      ? "Die Trennung ist ausreichend (min. Rₛ = "+fmt(run.minRs,2)+"). Die Probe enthält "+run.analytes.length+" Komponenten; zur Identifikation stehen "+poolCount+" mögliche Referenzstandards bereit. Nicht jeder Kandidat muss enthalten sein."
+      ? "Die Trennung ist ausreichend (min. Rₛ = "+fmt(run.minRs,2)+"). Es sind "+run.analytes.length+" getrennte Peaks sichtbar; zur Identifikation stehen "+poolCount+" mögliche Referenzstandards bereit. Nicht jeder Kandidat muss enthalten sein."
       : "Die Trennung ist ausreichend (min. Rₛ = "+fmt(run.minRs,2)+"). Referenzstandards werden jetzt unter exakt dieser Methode gemessen. Ordne danach den passenden Probenpeak zu.";
 
     els.identStandardButtons.innerHTML=candidates.map(id=>{
@@ -510,7 +510,7 @@
       }).filter(Boolean);
       els.identAssignmentFeedback.className="feedback good";
       els.identAssignmentFeedback.textContent=run.sample.unknown
-        ? "GC-U01 vollständig entziffert. Identifizierte Komponenten: "+identities.join(", ")+"."
+        ? run.sample.name_de+" vollständig entziffert. Identifizierte Komponenten: "+identities.join(", ")+"."
         : "Chromatogramm vollständig entziffert: Alle Probenpeaks sind durch Referenzläufe zugeordnet.";
     }else if(!activeId){
       els.identAssignmentFeedback.className="feedback neutral";

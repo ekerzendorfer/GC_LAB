@@ -1,6 +1,6 @@
 # GC-LAB
 
-**Version:** v0.3.0 – Single-Mode-Ausbau und zeitlich wachsendes Chromatogramm  
+**Version:** v0.3.1 – Referenzstandards und Peakzuordnung  
 **Projekt:** CHEMIE mit KI – Digitales Analytiklabor
 
 Browserbasiertes virtuelles Gaschromatographie-Labor ohne Build-Prozess und ohne Backend.
@@ -24,8 +24,8 @@ Der erste Stand konzentriert sich bewusst auf die fachliche Basis:
 
 ## Noch nicht enthalten
 
-- Referenzstandards / Aufstockung
-- Strukturaufklärungs-Lab
+- echte unbekannte Mischproben mit verdeckter Zusammensetzung
+- frei erweiterbarer Referenzstandard-Pool für zusätzliche Hub-Substanzen
 - Temperaturprogramm
 - quantitative GC-Kalibration
 
@@ -153,3 +153,40 @@ Erst nach Erreichen der vollständigen Laufzeit erscheint die Auswertung. Damit 
 Die Hub-Anbindung und die gezielte Bestätigung mit Referenzstandard/Aufstockung bleiben fachlich unverändert. Die neue Messdarstellung ändert keine Simulationsparameter und keine RESULT-Struktur.
 
 Leichte Basislinienunruhe oder Peak-Asymmetrie sind bewusst noch nicht Bestandteil von v0.3.0. Die idealisierten Gaußpeaks bleiben für die quantitative und didaktische Auswertung zunächst erhalten.
+
+
+## v0.3.1 – Chromatogramm entziffern
+
+Nach einem ausreichend getrennten Single-Mode-Lauf (`R_s ≥ 1,5`) erscheint der Arbeitsbereich **Chromatogramm entziffern**.
+
+### Referenzstandard-Läufe
+
+- Die erfolgreiche GC-Methode des Probenlaufs wird für die Identifikation eingefroren.
+- Referenzstandards werden unter exakt denselben Bedingungen simuliert.
+- Die Standardläufe entstehen im Vergleichsfenster zeitlich im Schnellmodus (60×).
+- Das Probenchromatogramm bleibt grau gestrichelt als Referenz sichtbar; der Standard wird violett darübergelegt.
+- Die Retentionszeit des Standards wird erst nach dem Standardlauf angezeigt.
+- SchülerInnen wählen selbst, welcher Probenpeak zur Standard-Retentionszeit passt.
+- Die Zuordnung wird anhand der Retentionszeit geprüft.
+- Erst nach korrekter Zuordnung erscheint der Stoffname beim betreffenden Peak.
+
+Für spätere unbekannte Proben ist auch die Option **kein passender Peak** vorgesehen. Damit können Referenzpools künftig gezielt Stoffe enthalten, die nicht in der Probe vorkommen.
+
+### Kandidatenpool statt fest verdrahteter Zusammensetzung
+
+Jede Single-Mode-Probe besitzt ab v0.3.1 ein Feld `candidate_pool`.
+
+Bei den derzeitigen Lernproben entspricht dieser Pool noch den tatsächlich enthaltenen Komponenten. Die Identifikationslogik verwendet jedoch bewusst den Kandidatenpool und nicht die interne Probenzusammensetzung als Auswahlquelle.
+
+Dadurch ist der nächste Ausbau vorbereitet:
+
+- Proben können später neutrale Bezeichnungen wie `GC-U01` erhalten.
+- Die Zusammensetzung kann im UI vollständig verborgen bleiben.
+- Der Kandidatenpool kann mehr Stoffe als die Probe enthalten.
+- Zusätzliche kuratierte Einzelsubstanzen können ergänzt werden, wenn neue Proben aus dem Analytik-Hub sie benötigen.
+
+### Fachliche Trennung der Rollen
+
+Der Single-Mode nutzt Referenzstandards zum systematischen Entziffern eines Chromatogramms.
+
+Der Hub-Bestätigungsmodus bleibt davon getrennt: Dort folgt der gezielte Standard- und Aufstockungsversuch erst auf eine bereits spektroskopisch begründete Strukturhypothese.

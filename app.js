@@ -366,6 +366,7 @@
     els.peakTable.innerHTML=run.analytes.map(a=>`<tr><td>${a.peakId}</td><td>${fmt(a.tr,2)}</td><td>${fmt(a.areaPercent,1)}</td><td>${fmt(a.width,2)}</td></tr>`).join("");
     setFeedback(feedbackFor(run),run.quality.className);
     updateBridgeAccept(run);
+    renderIdentification(run);
   }
 
   function renderHistory(){
@@ -393,6 +394,237 @@
     renderRun(run);
     els.runStatus.textContent=`Run ${index+1} aus Historie`;
     renderHistory();
+  }
+
+
+  function identificationEligible(run){
+    return !!(!bridgeMode && run && run.analytes.length>=2 && run.minRs!==null && run.minRs>=1.5);
+  }
+
+  function identificationCandidateIds(run){
+    const raw=Array.isArray(run?.sample?.candidate_pool) && run.sample.candidate_pool.length
+      ? run.sample.candidate_pool
+      : (run?.sample?.composition||[]).map(x=>x.substance_id);
+    return [...new Set(raw)].filter(id=>substance(id));
+  }
+
+  function identificationState(run){
+    if(!run.identification){
+      run.identification={standards:{},assignments:{},activeSubstanceId:null};
+    }
+    return run.identification;
+  }
+
+  function cancelIdentificationAnimation(){
+    identificationSequence++;
+    if(identificationAnimation!==null){
+      cancelAnimationFrame(identificationAnimation);
+      identificationAnimation=null;
+    }
+  }
+
+  function hideIdentification(){
+    if(!els.identificationPanel) return;
+    els.identificationPanel.classList.remove("active");
+  }
+
+  function identificationMethodLabel(run){
+    const phase=run.method.column_id==="COLUMN_NP"?"unpolar":"polar";
+    return phase+" · "+run.method.length_m+" m · "+run.method.temperature_c+" °C · "+FLOW[run.method.flow_key].label;
+  }
+
+  function identificationComplete(run,state){
+    const assignedPeaks=new Set(Object.values(state.assignments).filter(x=>x&&x!=="NONE"));
+    return run.analytes.every(a=>assignedPeaks.has(a.peakId));
+  }
+
+  function renderIdentification(run){
+    if(!identificationEligible(run)){
+      hideIdentification();
+      return;
+    }
+
+    const state=identificationState(run);
+    const candidates=identificationCandidateIds(run);
+    els.identificationPanel.classList.add("active");
+    els.identMethodLabel.textContent=identificationMethodLabel(run);
+    els.identIntro.textContent="Die Trennung ist ausreichend (min. Rₛ = "+fmt(run.minRs,2)+"). Referenzstandards werden jetzt unter exakt dieser Methode gemessen. Ordne danach den passenden Probenpeak zu.";
+
+    els.identStandardButtons.innerHTML=candidates.map(id=>{
+      const sub=substance(id);
+      const measured=!!state.standards[id];
+      const assigned=Object.prototype.hasOwnProperty.call(state.assignments,id);
+      const cls=assigned?"assigned":(measured?"measured":"");
+      const mark=assigned?"✓ ":(measured?"• ":"");
+      return '<button type="button" class="secondary '+cls+'" data-standard-id="'+id+'">'+mark+sub.name_de+' messen</button>';
+    }).join("");
+
+    els.identPeakSelect.innerHTML='<option value="">Peak auswählen …</option>'
+      +run.analytes.map(a=>'<option value="'+a.peakId+'">'+a.peakId+' · tR '+fmt(a.tr,2)+' min</option>').join("")
+      +'<option value="NONE">kein passender Peak</option>';
+
+    const activeId=state.activeSubstanceId;
+    const standardRun=activeId?state.standards[activeId]:null;
+    if(activeId && standardRun){
+      const sub=substance(activeId);
+      const a=standardRun.analytes[0];
+      els.identStandardTitle.textContent="Referenzstandard: "+sub.name_de;
+      els.identStandardInfo.textContent="Einzelpeak bei tR = "+fmt(a.tr,2)+" min. Vergleiche diese Retentionszeit mit den Peaks der Probe.";
+      els.identPeakSelect.disabled=false;
+      els.identAssignBtn.disabled=false;
+      if(state.assignments[activeId]) els.identPeakSelect.value=state.assignments[activeId];
+      drawIdentificationComparison(run,standardRun,standardRun.runtime,true);
+    }else{
+      els.identStandardTitle.textContent="Noch kein Referenzstandard gemessen";
+      els.identStandardInfo.textContent="Wähle einen Standard aus dem Kandidatenpool.";
+      els.identPeakSelect.disabled=true;
+      els.identAssignBtn.disabled=true;
+      drawIdentificationEmpty(run);
+    }
+
+    els.identMapBody.innerHTML=run.analytes.map(a=>{
+      const match=Object.entries(state.assignments).find(([,peakId])=>peakId===a.peakId);
+      const sid=match?match[0]:null;
+      const std=sid?state.standards[sid]:null;
+      const label=sid?substance(sid).name_de:"noch offen";
+      const evidence=std?"Standard tR "+fmt(std.analytes[0].tr,2)+" min":"–";
+      return '<tr><td>'+a.peakId+'</td><td>'+fmt(a.tr,2)+'</td><td>'+(sid?'<strong>'+label+'</strong>':'<span class="muted">'+label+'</span>')+'</td><td>'+evidence+'</td></tr>';
+    }).join("");
+
+    if(identificationComplete(run,state)){
+      els.identAssignmentFeedback.className="feedback good";
+      els.identAssignmentFeedback.textContent="Chromatogramm vollständig entziffert: Alle Probenpeaks sind durch Referenzläufe zugeordnet.";
+    }else if(!activeId){
+      els.identAssignmentFeedback.className="feedback neutral";
+      els.identAssignmentFeedback.textContent="Noch keine Peakzuordnung.";
+    }
+  }
+
+  function runIdentificationStandard(substanceId){
+    const run=lastRun;
+    if(!identificationEligible(run)) return;
+    const sub=substance(substanceId);
+    if(!sub) return;
+
+    cancelIdentificationAnimation();
+    const state=identificationState(run);
+    const standardSample={
+      id:"STD_"+substanceId,
+      name_de:"Referenzstandard "+sub.name_de,
+      description_de:"Referenzstandard zur Peakzuordnung.",
+      composition:[{substance_id:substanceId,fraction:0.25}]
+    };
+    const standardRun=simulate(standardSample,run.method);
+    state.standards[substanceId]=standardRun;
+    state.activeSubstanceId=substanceId;
+
+    els.identStandardTitle.textContent="Referenzstandard: "+sub.name_de+" · Messung läuft";
+    els.identStandardInfo.textContent="Referenzlauf unter unveränderten GC-Bedingungen · Schnellmodus 60×.";
+    els.identPeakSelect.disabled=true;
+    els.identAssignBtn.disabled=true;
+    [...els.identStandardButtons.querySelectorAll("button")].forEach(btn=>btn.disabled=true);
+
+    const token=++identificationSequence;
+    const startedAt=performance.now();
+    const step=now=>{
+      if(token!==identificationSequence) return;
+      const elapsedSeconds=(now-startedAt)/1000;
+      const currentTime=Math.min(standardRun.runtime,elapsedSeconds);
+      drawIdentificationComparison(run,standardRun,currentTime,false);
+      els.identStandardInfo.textContent="Referenzlauf: "+fmt(currentTime,2)+" / "+fmt(standardRun.runtime,2)+" min · Darstellung 60×";
+
+      if(currentTime>=standardRun.runtime){
+        identificationAnimation=null;
+        renderIdentification(run);
+        els.identAssignmentFeedback.className="feedback neutral";
+        els.identAssignmentFeedback.textContent="Standard "+sub.name_de+" gemessen. Vergleiche tR und ordne den passenden Peak zu.";
+        return;
+      }
+      identificationAnimation=requestAnimationFrame(step);
+    };
+    identificationAnimation=requestAnimationFrame(step);
+  }
+
+  function identificationTolerance(standardAnalyte,peak){
+    return Math.max(0.03,0.125*(standardAnalyte.width+peak.width));
+  }
+
+  function assignIdentificationPeak(){
+    const run=lastRun;
+    if(!identificationEligible(run)) return;
+    const state=identificationState(run);
+    const sid=state.activeSubstanceId;
+    const standardRun=sid?state.standards[sid]:null;
+    const selected=els.identPeakSelect.value;
+    if(!sid || !standardRun || !selected) return;
+
+    const standardAnalyte=standardRun.analytes[0];
+    const matches=run.analytes.filter(p=>Math.abs(p.tr-standardAnalyte.tr)<=identificationTolerance(standardAnalyte,p));
+    let correct=false;
+    if(selected==="NONE"){
+      correct=matches.length===0;
+    }else{
+      correct=matches.some(p=>p.peakId===selected);
+    }
+
+    if(!correct){
+      els.identAssignmentFeedback.className="feedback bad";
+      els.identAssignmentFeedback.textContent="Diese Zuordnung passt nicht zur Retentionszeit des Standards. Vergleiche die tR-Werte noch einmal.";
+      return;
+    }
+
+    state.assignments[sid]=selected;
+    renderIdentification(run);
+    if(selected==="NONE"){
+      els.identAssignmentFeedback.className="feedback good";
+      els.identAssignmentFeedback.textContent=substance(sid).name_de+" besitzt unter dieser Methode keinen passenden Peak in der Probe.";
+    }else if(!identificationComplete(run,state)){
+      els.identAssignmentFeedback.className="feedback good";
+      els.identAssignmentFeedback.textContent=substance(sid).name_de+" wurde "+selected+" zugeordnet. Messe den nächsten Referenzstandard.";
+    }
+  }
+
+  function drawIdentificationEmpty(run){
+    const canvas=els.identCanvas,ctx=canvas.getContext("2d");
+    const maxY=Math.max(...run.points.map(p=>p.y),1e-6)*1.12;
+    drawAxes(ctx,canvas,run.runtime,maxY);
+    const pad={l:72,r:24,t:25,b:55},w=canvas.width-pad.l-pad.r,h=canvas.height-pad.t-pad.b;
+    drawTrace(ctx,run,run.runtime,maxY,pad,w,h,"rgba(210,225,240,.55)",2,[7,5]);
+    ctx.fillStyle="#91a7be";ctx.font="13px system-ui";ctx.fillText("Probe · Referenzstandard auswählen",pad.l+10,pad.t+18);
+  }
+
+  function drawIdentificationComparison(baseRun,standardRun,currentTime,complete){
+    const canvas=els.identCanvas,ctx=canvas.getContext("2d");
+    const xMax=Math.max(baseRun.runtime,standardRun.runtime);
+    const visiblePoints=standardRun.points.filter(p=>p.t<=currentTime+1e-9);
+    const maxY=Math.max(
+      ...baseRun.points.map(p=>p.y),
+      ...standardRun.points.map(p=>p.y),
+      1e-6
+    )*1.12;
+    drawAxes(ctx,canvas,xMax,maxY);
+    const pad={l:72,r:24,t:25,b:55},w=canvas.width-pad.l-pad.r,h=canvas.height-pad.t-pad.b;
+    drawTrace(ctx,baseRun,xMax,maxY,pad,w,h,"rgba(210,225,240,.50)",2,[7,5]);
+
+    const partial={...standardRun,points:visiblePoints};
+    drawTrace(ctx,partial,xMax,maxY,pad,w,h,"#a78bfa",2.8,[]);
+
+    ctx.font="bold 12px system-ui";ctx.textAlign="center";
+    baseRun.analytes.forEach(a=>{
+      const x=pad.l+w*a.tr/xMax;
+      ctx.strokeStyle="rgba(255,255,255,.18)";ctx.setLineDash([3,4]);
+      ctx.beginPath();ctx.moveTo(x,pad.t);ctx.lineTo(x,pad.t+h);ctx.stroke();ctx.setLineDash([]);
+      ctx.fillStyle="#d9f7fb";ctx.fillText(a.peakId,x,pad.t+16);
+    });
+    ctx.textAlign="left";
+    ctx.fillStyle="#b8c8da";ctx.font="12px system-ui";
+    ctx.fillText("grau gestrichelt: Probe · violett: Referenzstandard",pad.l+10,pad.t+h-10);
+
+    if(!complete){
+      const x=pad.l+w*Math.min(currentTime,xMax)/xMax;
+      ctx.strokeStyle="rgba(251,191,36,.75)";ctx.setLineDash([4,4]);
+      ctx.beginPath();ctx.moveTo(x,pad.t);ctx.lineTo(x,pad.t+h);ctx.stroke();ctx.setLineDash([]);
+    }
   }
 
   function setBridgeBanner(message,isError=false){

@@ -14,7 +14,7 @@
       <h1>GC-LAB</h1>
       <p>Gaschromatographie verstehen, Methoden entwickeln und Trennqualität beurteilen.</p>
     </div>
-    <div class="version">v0.2.0<br><small id="modeLabel">Single-Mode</small></div>
+    <div class="version">v0.3.0<br><small id="modeLabel">Single-Mode</small></div>
   </header>
 
   <div id="bridgeContext" class="bridge-context">
@@ -107,6 +107,15 @@
       </label>
       <p class="hint">Der mittlere Strom liegt im didaktischen Modell nahe am Effizienzoptimum.</p>
 
+      <label>Messdarstellung
+        <select id="displaySpeedSelect">
+          <option value="observe" selected>Beobachten · 12×</option>
+          <option value="fast">Schnell · 60×</option>
+          <option value="instant">Sofort · Ergebnisansicht</option>
+        </select>
+      </label>
+      <p class="hint">Die x-Achse zeigt chromatographische Modellzeit. „12×“ bzw. „60×“ beschleunigt nur die Bildschirmdarstellung.</p>
+
       <button id="runBtn" class="primary" type="button">GC-Lauf starten</button>
       <button id="resetBtn" class="secondary" type="button">Versuchshistorie löschen</button>
     </aside>
@@ -167,7 +176,7 @@
         <div><strong>Säulenlänge</strong><span>beeinflusst Effizienz und Laufzeit</span></div>
         <div><strong>Gasstrom</strong><span>beeinflusst Totzeit und Effizienz</span></div>
       </div>
-      <p class="hint">GC-LAB v0.1 verwendet bewusst kuratierte Modellparameter. Es ist kein universeller Retentionszeit-Rechner.</p>
+      <p class="hint">GC-LAB v0.3 verwendet bewusst kuratierte Modellparameter. Es ist kein universeller Retentionszeit-Rechner.</p>
     </section>
   </main>
 

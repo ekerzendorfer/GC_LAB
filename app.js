@@ -834,26 +834,47 @@
     ctx.fillStyle="#71869e";ctx.font="18px system-ui";ctx.fillText("Noch kein GC-Lauf",canvas.width/2-75,canvas.height/2);
   }
 
+  function drawChromatogramProgress(run,currentTime){
+    drawChromatogramAt(run,currentTime,false);
+  }
+
   function drawChromatogram(run){
+    drawChromatogramAt(run,run.runtime,true);
+  }
+
+  function drawChromatogramAt(run,currentTime,showPeakLabels){
     const canvas=els.chromCanvas,ctx=canvas.getContext("2d");
     ctx.clearRect(0,0,canvas.width,canvas.height);
     const maxY=Math.max(...run.points.map(p=>p.y),1e-6)*1.12;
     drawAxes(ctx,canvas,run.runtime,maxY);
     const pad={l:72,r:24,t:25,b:55},w=canvas.width-pad.l-pad.r,h=canvas.height-pad.t-pad.b;
-    ctx.strokeStyle="#54d2df";ctx.lineWidth=2.5;ctx.beginPath();
-    run.points.forEach((p,i)=>{
-      const x=pad.l+w*p.t/run.runtime, y=pad.t+h-h*p.y/maxY;
-      if(i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
-    });
-    ctx.stroke();
+    const visible=run.points.filter(p=>p.t<=currentTime+1e-9);
 
-    ctx.font="bold 14px system-ui";ctx.textAlign="center";
-    run.analytes.forEach(a=>{
-      const x=pad.l+w*a.tr/run.runtime;
-      ctx.strokeStyle="rgba(255,255,255,.20)";ctx.setLineDash([4,5]);ctx.beginPath();ctx.moveTo(x,pad.t);ctx.lineTo(x,pad.t+h);ctx.stroke();ctx.setLineDash([]);
-      ctx.fillStyle="#d9f7fb";ctx.fillText(a.peakId,x,pad.t+18);
-    });
-    ctx.textAlign="left";
+    if(visible.length){
+      ctx.strokeStyle="#54d2df";ctx.lineWidth=2.5;ctx.beginPath();
+      visible.forEach((p,i)=>{
+        const x=pad.l+w*p.t/run.runtime, y=pad.t+h-h*p.y/maxY;
+        if(i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+      });
+      ctx.stroke();
+    }
+
+    if(showPeakLabels){
+      ctx.font="bold 14px system-ui";ctx.textAlign="center";
+      run.analytes.forEach(a=>{
+        const x=pad.l+w*a.tr/run.runtime;
+        ctx.strokeStyle="rgba(255,255,255,.20)";ctx.setLineDash([4,5]);ctx.beginPath();ctx.moveTo(x,pad.t);ctx.lineTo(x,pad.t+h);ctx.stroke();ctx.setLineDash([]);
+        ctx.fillStyle="#d9f7fb";ctx.fillText(a.peakId,x,pad.t+18);
+      });
+      ctx.textAlign="left";
+    }else if(currentTime<run.runtime){
+      const x=pad.l+w*Math.max(0,Math.min(run.runtime,currentTime))/run.runtime;
+      ctx.strokeStyle="rgba(251,191,36,.78)";ctx.lineWidth=1.5;ctx.setLineDash([4,4]);
+      ctx.beginPath();ctx.moveTo(x,pad.t);ctx.lineTo(x,pad.t+h);ctx.stroke();ctx.setLineDash([]);
+      ctx.fillStyle="#f6d778";ctx.font="bold 12px system-ui";ctx.textAlign="right";
+      ctx.fillText("t = "+fmt(currentTime,2)+" min",Math.min(x-6,pad.l+w-6),pad.t+16);
+      ctx.textAlign="left";
+    }
   }
 
   function drawAxes(ctx,canvas,xMax,yMax){

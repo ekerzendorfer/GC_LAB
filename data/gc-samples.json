@@ -1,13 +1,19 @@
 {
-  "schema_version": "0.1.0",
+  "schema_version": "0.3.0",
   "samples": [
     {
       "id": "SAMPLE_EA_BUOH_50",
       "name_de": "Ethylacetat / 1-Butanol (50 : 50)",
       "description_de": "Zweikomponentengemisch für den Einstieg in die Methodenentwicklung.",
       "composition": [
-        {"substance_id": "ETHYL_ACETATE", "fraction": 0.50},
-        {"substance_id": "BUTAN_1_OL", "fraction": 0.50}
+        {
+          "substance_id": "ETHYL_ACETATE",
+          "fraction": 0.5
+        },
+        {
+          "substance_id": "BUTAN_1_OL",
+          "fraction": 0.5
+        }
       ]
     },
     {
@@ -15,8 +21,14 @@
       "name_de": "n-Hexan / Toluol (50 : 50)",
       "description_de": "Unpolares Zweikomponentengemisch zum Vergleich der Säulentypen.",
       "composition": [
-        {"substance_id": "HEXANE", "fraction": 0.50},
-        {"substance_id": "TOLUENE", "fraction": 0.50}
+        {
+          "substance_id": "HEXANE",
+          "fraction": 0.5
+        },
+        {
+          "substance_id": "TOLUENE",
+          "fraction": 0.5
+        }
       ]
     },
     {
@@ -24,9 +36,75 @@
       "name_de": "Aceton / Ethanol / Toluol (35 : 35 : 30)",
       "description_de": "Dreikomponentengemisch als erster Ausblick auf komplexere Chromatogramme.",
       "composition": [
-        {"substance_id": "ACETONE", "fraction": 0.35},
-        {"substance_id": "ETHANOL", "fraction": 0.35},
-        {"substance_id": "TOLUENE", "fraction": 0.30}
+        {
+          "substance_id": "ACETONE",
+          "fraction": 0.35
+        },
+        {
+          "substance_id": "ETHANOL",
+          "fraction": 0.35
+        },
+        {
+          "substance_id": "TOLUENE",
+          "fraction": 0.3
+        }
+      ]
+    },
+    {
+      "id": "SAMPLE_MEOH_ETOH_BUOH",
+      "name_de": "Methanol / Ethanol / 1-Butanol (33 : 34 : 33)",
+      "description_de": "Homologe Alkoholreihe: Retention und Auflösung systematisch über Temperatur, Säule und Gasstrom untersuchen.",
+      "composition": [
+        {
+          "substance_id": "METHANOL",
+          "fraction": 0.33
+        },
+        {
+          "substance_id": "ETHANOL",
+          "fraction": 0.34
+        },
+        {
+          "substance_id": "BUTAN_1_OL",
+          "fraction": 0.33
+        }
+      ]
+    },
+    {
+      "id": "SAMPLE_ACE_ETOH_EA",
+      "name_de": "Aceton / Ethanol / Ethylacetat (34 : 33 : 33)",
+      "description_de": "Selektivitätsprobe: zeigt besonders gut, dass Elutionsreihenfolge und Trennung nicht allein vom Siedepunkt abhängen.",
+      "composition": [
+        {
+          "substance_id": "ACETONE",
+          "fraction": 0.34
+        },
+        {
+          "substance_id": "ETHANOL",
+          "fraction": 0.33
+        },
+        {
+          "substance_id": "ETHYL_ACETATE",
+          "fraction": 0.33
+        }
+      ]
+    },
+    {
+      "id": "SAMPLE_HEX_CYC_TOL",
+      "name_de": "n-Hexan / Cyclohexan / Toluol (34 : 33 : 33)",
+      "description_de": "Unpolares Dreikomponentengemisch: Einfluss von Temperatur, Säulenlänge und Gasstrom auf Laufzeit und Auflösung.",
+      "composition": [
+        {
+          "substance_id": "HEXANE",
+          "fraction": 0.34
+        },
+        {
+          "substance_id": "CYCLOHEXANE",
+          "fraction": 0.33
+        },
+        {
+          "substance_id": "TOLUENE",
+          "fraction": 0.33
+        }
       ]
     }
   ]

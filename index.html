@@ -14,7 +14,7 @@
       <h1>GC-LAB</h1>
       <p>Gaschromatographie verstehen, Methoden entwickeln und Trennqualität beurteilen.</p>
     </div>
-    <div class="version">v0.3.0<br><small id="modeLabel">Single-Mode</small></div>
+    <div class="version">v0.3.1<br><small id="modeLabel">Single-Mode</small></div>
   </header>
 
   <div id="bridgeContext" class="bridge-context">
@@ -152,6 +152,42 @@
       <p class="hint">Peakflächen-% sind in diesem vereinfachten FID-Modell nicht automatisch Stoffmengen-%.</p>
     </aside>
 
+    <section id="identificationPanel" class="card identification-card">
+      <div class="section-head">
+        <div>
+          <p class="kicker">Identifikation</p>
+          <h2>Chromatogramm entziffern</h2>
+        </div>
+        <div id="identMethodLabel" class="status-pill">Methode fixiert</div>
+      </div>
+      <p id="identIntro" class="hint">Nach einer ausreichend guten Trennung können Referenzstandards unter exakt denselben GC-Bedingungen gemessen und Peaks zugeordnet werden.</p>
+
+      <div id="identStandardButtons" class="ident-standard-grid"></div>
+
+      <div class="ident-workbench">
+        <div>
+          <strong id="identStandardTitle">Noch kein Referenzstandard gemessen</strong>
+          <p id="identStandardInfo" class="hint">Wähle einen Standard aus dem Kandidatenpool.</p>
+        </div>
+        <div class="ident-assign">
+          <select id="identPeakSelect" disabled>
+            <option value="">Peak auswählen …</option>
+          </select>
+          <button id="identAssignBtn" class="primary compact" type="button" disabled>Standard zuordnen</button>
+        </div>
+      </div>
+
+      <canvas id="identCanvas" width="980" height="300" aria-label="Vergleich Probe und Referenzstandard"></canvas>
+      <div id="identAssignmentFeedback" class="feedback neutral">Noch keine Peakzuordnung.</div>
+
+      <div class="table-wrap ident-map-wrap">
+        <table>
+          <thead><tr><th>Peak</th><th>tR / min</th><th>Zuordnung</th><th>Beleg</th></tr></thead>
+          <tbody id="identMapBody"><tr><td colspan="4" class="muted">Noch keine Zuordnung.</td></tr></tbody>
+        </table>
+      </div>
+    </section>
+
     <section class="card history-card">
       <div class="section-head">
         <div>
@@ -176,7 +212,7 @@
         <div><strong>Säulenlänge</strong><span>beeinflusst Effizienz und Laufzeit</span></div>
         <div><strong>Gasstrom</strong><span>beeinflusst Totzeit und Effizienz</span></div>
       </div>
-      <p class="hint">GC-LAB v0.3 verwendet bewusst kuratierte Modellparameter. Es ist kein universeller Retentionszeit-Rechner.</p>
+      <p class="hint">GC-LAB v0.3.1 verwendet bewusst kuratierte Modellparameter. Es ist kein universeller Retentionszeit-Rechner.</p>
     </section>
   </main>
 

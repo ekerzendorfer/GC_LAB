@@ -1,7 +1,7 @@
 (() => {
   "use strict";
 
-  const VERSION = "0.3.0";
+  const VERSION = "0.3.1";
   const FLOW = {
     low: {label:"niedrig", value:0.8, efficiency:0.82},
     medium: {label:"mittel", value:1.2, efficiency:1.00},
@@ -33,6 +33,8 @@
   let runInProgress = false;
   let activeRunAnimation = null;
   let animationSequence = 0;
+  let identificationAnimation = null;
+  let identificationSequence = 0;
   const els = {};
 
   document.addEventListener("DOMContentLoaded", init);
@@ -75,7 +77,9 @@
       "runtimeMetric","peakCountMetric","rsMetric","qualityMetric","peakTable","historyTable",
       "bridgeContext","bridgeSampleLabel","bridgeRunLabel","bridgeMessage","bridgeAcceptBtn","bridgeReturnBtn","modeLabel",
       "verificationPanel","verificationHypothesis","verificationPeak","verificationMethod","standardRunBtn","spikeRunBtn",
-      "standardEvidence","spikeEvidence","verificationLegend","verificationZoomCanvas","verificationZoomLegend"]
+      "standardEvidence","spikeEvidence","verificationLegend","verificationZoomCanvas","verificationZoomLegend",
+      "identificationPanel","identMethodLabel","identIntro","identStandardButtons","identStandardTitle","identStandardInfo",
+      "identPeakSelect","identAssignBtn","identCanvas","identAssignmentFeedback","identMapBody"]
       .forEach(id => els[id] = document.getElementById(id));
   }
 
@@ -120,6 +124,11 @@
     els.resetBtn.addEventListener("click",resetSession);
     els.standardRunBtn.addEventListener("click",runVerificationStandard);
     els.spikeRunBtn.addEventListener("click",runVerificationSpike);
+    els.identStandardButtons.addEventListener("click",event=>{
+      const btn=event.target.closest("button[data-standard-id]");
+      if(btn) runIdentificationStandard(btn.dataset.standardId);
+    });
+    els.identAssignBtn.addEventListener("click",assignIdentificationPeak);
   }
 
   function applyLevel(){
@@ -167,6 +176,7 @@
 
   function resetSession(){
     cancelRunAnimation();
+    cancelIdentificationAnimation();
     history=[];
     lastRun=null;
     selectedHistoryIndex=null;
@@ -174,6 +184,7 @@
     renderHistory();
     resetMetrics();
     drawEmptyChromatogram();
+    hideIdentification();
     setFeedback("Wähle eine Methode und starte den ersten Lauf.","neutral");
     updateBridgeAccept(null);
   }
@@ -287,6 +298,8 @@
 
   function runGc(){
     if(runInProgress) return;
+    cancelIdentificationAnimation();
+    hideIdentification();
     const run=simulate(currentSample(),method());
     const displayKey=els.displaySpeedSelect?.value || "observe";
     const display=DISPLAY_SPEED[displayKey] || DISPLAY_SPEED.observe;

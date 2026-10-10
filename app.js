@@ -1,11 +1,16 @@
 (() => {
   "use strict";
 
-  const VERSION = "0.2.0";
+  const VERSION = "0.3.0";
   const FLOW = {
     low: {label:"niedrig", value:0.8, efficiency:0.82},
     medium: {label:"mittel", value:1.2, efficiency:1.00},
     high: {label:"hoch", value:1.8, efficiency:0.78}
+  };
+  const DISPLAY_SPEED = {
+    observe: {label:"Beobachten · 12×", factor:12},
+    fast: {label:"Schnell · 60×", factor:60},
+    instant: {label:"Sofort", factor:Infinity}
   };
   const REF_T = 100;
   const REF_TM = 0.80;
@@ -25,6 +30,9 @@
   let verificationStandardRun = null;
   let verificationSpikeRun = null;
   let verificationEvidence = {standard:false,spike:false};
+  let runInProgress = false;
+  let activeRunAnimation = null;
+  let animationSequence = 0;
   const els = {};
 
   document.addEventListener("DOMContentLoaded", init);
@@ -62,7 +70,7 @@
   }
 
   function bindEls(){
-    ["levelSelect","sampleSelect","columnSelect","lengthSelect","temperatureSelect","flowSelect",
+    ["levelSelect","sampleSelect","columnSelect","lengthSelect","temperatureSelect","flowSelect","displaySpeedSelect",
       "sampleInfo","columnInfo","runBtn","resetBtn","chromCanvas","runStatus","methodFeedback",
       "runtimeMetric","peakCountMetric","rsMetric","qualityMetric","peakTable","historyTable",
       "bridgeContext","bridgeSampleLabel","bridgeRunLabel","bridgeMessage","bridgeAcceptBtn","bridgeReturnBtn","modeLabel",
@@ -99,7 +107,7 @@
       if(!row) return;
       showHistoryRun(Number(row.dataset.historyIndex));
     });
-    els.resetBtn.addEventListener("click",()=>{history=[]; lastRun=null; selectedHistoryIndex=null; renderHistory(); resetMetrics(); drawEmptyChromatogram(); setFeedback("Wähle eine Methode und starte den ersten Lauf.","neutral");});
+    els.resetBtn.addEventListener("click",resetSession);
     els.standardRunBtn.addEventListener("click",runVerificationStandard);
     els.spikeRunBtn.addEventListener("click",runVerificationSpike);
   }
@@ -112,6 +120,52 @@
     }
     els.lengthSelect.disabled = basic;
     els.flowSelect.disabled = basic;
+  }
+
+  function restoreControlLocks(){
+    [els.levelSelect,els.sampleSelect,els.columnSelect,els.lengthSelect,els.temperatureSelect,els.flowSelect,els.displaySpeedSelect]
+      .forEach(el=>{if(el) el.disabled=false;});
+    applyLevel();
+    if(bridgeMode){
+      els.levelSelect.disabled=true;
+      els.sampleSelect.disabled=true;
+    }
+    if(verificationMode) setMethodControls(verificationMethodFromInput());
+  }
+
+  function setRunControlsLocked(locked){
+    if(locked){
+      [els.levelSelect,els.sampleSelect,els.columnSelect,els.lengthSelect,els.temperatureSelect,els.flowSelect,els.displaySpeedSelect]
+        .forEach(el=>{if(el) el.disabled=true;});
+      els.runBtn.disabled=true;
+      els.runBtn.textContent="Messung läuft …";
+    }else{
+      els.runBtn.disabled=false;
+      els.runBtn.textContent="GC-Lauf starten";
+      restoreControlLocks();
+    }
+  }
+
+  function cancelRunAnimation(){
+    animationSequence++;
+    if(activeRunAnimation!==null){
+      cancelAnimationFrame(activeRunAnimation);
+      activeRunAnimation=null;
+    }
+    runInProgress=false;
+  }
+
+  function resetSession(){
+    cancelRunAnimation();
+    history=[];
+    lastRun=null;
+    selectedHistoryIndex=null;
+    setRunControlsLocked(false);
+    renderHistory();
+    resetMetrics();
+    drawEmptyChromatogram();
+    setFeedback("Wähle eine Methode und starte den ersten Lauf.","neutral");
+    updateBridgeAccept(null);
   }
 
   function updateInfo(){

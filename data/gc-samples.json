@@ -138,7 +138,7 @@
     {
       "id": "GC_U01",
       "name_de": "GC-U01 · unbekannte Mischprobe",
-      "description_de": "Unbekannte flüchtige Mischprobe mit drei Komponenten. Entwickle zuerst eine ausreichend trennende Methode und identifiziere anschließend die Peaks mit Referenzstandards.",
+      "description_de": "Unbekannte flüchtige Mischprobe. Entwickle zuerst eine ausreichend trennende Methode und identifiziere anschließend die Peaks mit Referenzstandards.",
       "unknown": true,
       "composition": [
         {

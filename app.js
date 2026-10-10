@@ -88,17 +88,27 @@
     return {substances:files[0].substances, columns:files[1].columns, samples:files[2].samples};
   }
 
+  function populateSampleOptions(){
+    if(bridgeMode){
+      els.sampleSelect.innerHTML='<option value="">Hub-Probe wird geladen …</option>';
+      els.sampleSelect.disabled=true;
+      return;
+    }
+    const current=els.sampleSelect.value;
+    const basic=els.levelSelect.value==="basic";
+    const choices=basic ? db.samples.filter(s=>s.composition.length<=2) : db.samples;
+    els.sampleSelect.innerHTML=choices.map(s=>'<option value="'+s.id+'">'+s.name_de+'</option>').join("");
+    if(choices.some(s=>s.id===current)) els.sampleSelect.value=current;
+  }
+
   function populateControls(){
-    els.sampleSelect.innerHTML = bridgeMode
-      ? '<option value="">Hub-Probe wird geladen …</option>'
-      : db.samples.map(s=>`<option value="${s.id}">${s.name_de}</option>`).join("");
-    if(bridgeMode) els.sampleSelect.disabled=true;
-    els.columnSelect.innerHTML = db.columns.map(c=>`<option value="${c.id}">${c.name_de}</option>`).join("");
-    els.temperatureSelect.innerHTML = Array.from({length:8},(_,i)=>70+i*10).map(t=>`<option value="${t}" ${t===100?"selected":""}>${t} °C</option>`).join("");
+    populateSampleOptions();
+    els.columnSelect.innerHTML = db.columns.map(c=>'<option value="'+c.id+'">'+c.name_de+'</option>').join("");
+    els.temperatureSelect.innerHTML = Array.from({length:8},(_,i)=>70+i*10).map(t=>'<option value="'+t+'" '+(t===100?"selected":"")+'>'+t+' °C</option>').join("");
   }
 
   function bindEvents(){
-    els.levelSelect.addEventListener("change",()=>{applyLevel(); updateInfo();});
+    els.levelSelect.addEventListener("change",()=>{applyLevel(); populateSampleOptions(); updateInfo();});
     els.sampleSelect.addEventListener("change",updateInfo);
     els.columnSelect.addEventListener("change",updateInfo);
     els.runBtn.addEventListener("click",runGc);

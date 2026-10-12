@@ -324,6 +324,8 @@
 
     lastRun=null;
     updateBridgeAccept(null);
+    els.processToggleBtn.disabled=true;
+    els.processReplayBtn.disabled=true;
 
     if(!Number.isFinite(display.factor)){
       completeGcRun(run);
@@ -510,9 +512,10 @@
     processAnimation=requestAnimationFrame(step);
   }
 
-  function processBandState(analyte,index,count,currentTime){
+  function processBandState(analyte,index,allAnalytes,currentTime){
     const progress=analyte.tr>0?Math.max(0,Math.min(1,currentTime/analyte.tr)):1;
-    const ks=lastRun?.analytes?.slice(0,3).map(a=>a.k) || [];
+    const count=allAnalytes.length;
+    const ks=allAnalytes.map(a=>a.k);
     const minK=ks.length?Math.min(...ks):0;
     const maxK=ks.length?Math.max(...ks):1;
     const strength=maxK>minK?(analyte.k-minK)/(maxK-minK):(count>1?index/(count-1):0.5);
@@ -585,7 +588,7 @@
 
     const maxWidth=Math.max(...analytes.map(a=>a.width),1e-6);
     analytes.forEach((a,i)=>{
-      const state=processBandState(a,i,analytes.length,currentTime);
+      const state=processBandState(a,i,analytes,currentTime);
       const color=colors[i%colors.length];
       const arrived=currentTime>=a.tr;
       if(!arrived){
@@ -654,7 +657,7 @@
       const x=132+i*185;
       ctx.fillStyle=colors[i%colors.length];ctx.beginPath();ctx.arc(x,257,5,0,Math.PI*2);ctx.fill();
       ctx.fillStyle="#c7d6e5";ctx.font="11px system-ui";
-      const state=processBandState(a,i,analytes.length,Math.min(currentTime,a.tr*.999));
+      const state=processBandState(a,i,analytes,Math.min(currentTime,a.tr*.999));
       const strength=state.strength<.34?"schwächer":(state.strength<.67?"mittel":"stärker");
       ctx.fillText(labels[i]+" · "+strength+"e Wechselwirkung",x+10,261);
     });

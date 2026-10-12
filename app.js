@@ -8,8 +8,8 @@
     high: {label:"hoch", value:1.8, efficiency:0.78}
   };
   const DISPLAY_SPEED = {
-    observe: {label:"Beobachten · 12×", factor:12},
-    fast: {label:"Schnell · 60×", factor:60},
+    observe: {label:"Beobachten · 8×", factor:8},
+    fast: {label:"Schnell · 40×", factor:40},
     instant: {label:"Sofort", factor:Infinity}
   };
   const REF_T = 100;
@@ -71,6 +71,7 @@
       updateInfo();
     }
     drawEmptyChromatogram();
+    resetProcessView();
     if(bridgeMode) await initAnalytikBridge();
   }
 
@@ -421,8 +422,12 @@
   }
 
 
+  function processViewAllowed(){
+    return !bridgeMode && !verificationMode;
+  }
+
   function processAvailable(run){
-    return !!(!bridgeMode && run && run.analytes.length>=2 && run.analytes.length<=3);
+    return !!(processViewAllowed() && run && run.analytes.length>=2 && run.analytes.length<=3);
   }
 
   function cancelProcessAnimation(){
@@ -442,7 +447,7 @@
     if(els.processPanel) els.processPanel.classList.remove("active");
     if(els.processToggleBtn){
       els.processToggleBtn.textContent="Trennprozess anzeigen";
-      els.processToggleBtn.disabled=true;
+      els.processToggleBtn.disabled=!processViewAllowed();
     }
     if(els.processReplayBtn){
       els.processReplayBtn.textContent="Animation wiederholen";
@@ -457,28 +462,34 @@
 
   function updateProcessAvailability(run){
     const available=processAvailable(run);
-    els.processToggleBtn.disabled=!available;
+    els.processToggleBtn.disabled=!processViewAllowed();
     els.processReplayBtn.disabled=!available;
-    if(!available){
+
+    if(!processViewAllowed()){
       processVisible=false;
       els.processPanel.classList.remove("active");
       els.processToggleBtn.textContent="Trennprozess anzeigen";
       return;
     }
+
     if(processVisible){
       els.processPanel.classList.add("active");
       els.processToggleBtn.textContent="Trennprozess ausblenden";
-      drawProcessModel(run,run.runtime);
+      if(available) drawProcessModel(run,run.runtime);
+      else drawProcessSetup();
     }
   }
 
   function toggleProcessPanel(){
-    if(!processAvailable(lastRun)) return;
+    if(!processViewAllowed()) return;
     cancelProcessAnimation();
     processVisible=!processVisible;
     els.processPanel.classList.toggle("active",processVisible);
     els.processToggleBtn.textContent=processVisible?"Trennprozess ausblenden":"Trennprozess anzeigen";
-    if(processVisible) drawProcessModel(lastRun,lastRun.runtime);
+    if(processVisible){
+      if(processAvailable(lastRun)) drawProcessModel(lastRun,lastRun.runtime);
+      else drawProcessSetup();
+    }
   }
 
   function replayProcessAnimation(){
@@ -511,6 +522,76 @@
     };
     processAnimation=requestAnimationFrame(step);
   }
+
+  function drawProcessSetup(){
+    if(!els.processCanvas) return;
+    const canvas=els.processCanvas,ctx=canvas.getContext("2d");
+    const W=canvas.width,H=canvas.height;
+    ctx.clearRect(0,0,W,H);
+    ctx.fillStyle="#06101b";ctx.fillRect(0,0,W,H);
+
+    const col={x0:130,x1:690,top:82,bottom:202};
+    const center=(col.top+col.bottom)/2;
+
+    ctx.fillStyle="#0c1d30";ctx.strokeStyle="#4b647f";ctx.lineWidth=2;
+    ctx.fillRect(24,108,78,70);ctx.strokeRect(24,108,78,70);
+    ctx.fillStyle="#d9e8f5";ctx.font="bold 13px system-ui";ctx.textAlign="center";
+    ctx.fillText("Injektor",63,100);
+    ctx.fillStyle="#8ea4bd";ctx.font="11px system-ui";ctx.fillText("bereit",63,149);
+
+    drawArrow(ctx,103,143,col.x0-6,143,"Trägergas");
+
+    ctx.fillStyle="#091827";ctx.strokeStyle="#59728c";ctx.lineWidth=2;
+    ctx.fillRect(col.x0,col.top,col.x1-col.x0,col.bottom-col.top);
+    ctx.strokeRect(col.x0,col.top,col.x1-col.x0,col.bottom-col.top);
+
+    ctx.fillStyle="rgba(96,165,250,.13)";
+    ctx.fillRect(col.x0+2,col.top+2,col.x1-col.x0-4,17);
+    ctx.fillRect(col.x0+2,col.bottom-19,col.x1-col.x0-4,17);
+    ctx.fillStyle="#9fb5ca";ctx.font="11px system-ui";ctx.textAlign="left";
+    ctx.fillText("stationäre Phase",col.x0+8,col.top-9);
+    ctx.fillText("mobile Phase / Trägergas",col.x0+218,center+4);
+
+    for(let x=col.x0+20;x<col.x1-10;x+=36){
+      ctx.strokeStyle="rgba(96,165,250,.20)";ctx.lineWidth=2;
+      ctx.beginPath();ctx.moveTo(x,col.top+5);ctx.lineTo(x+8,col.top+14);ctx.stroke();
+      ctx.beginPath();ctx.moveTo(x,col.bottom-5);ctx.lineTo(x+8,col.bottom-14);ctx.stroke();
+    }
+
+    ctx.fillStyle="#0c1d30";ctx.strokeStyle="#4b647f";ctx.lineWidth=2;
+    ctx.fillRect(716,105,76,78);ctx.strokeRect(716,105,76,78);
+    ctx.fillStyle="#d9e8f5";ctx.font="bold 13px system-ui";ctx.textAlign="center";
+    ctx.fillText("Detektor",754,98);
+    ctx.fillStyle="#9fb5ca";ctx.font="10px system-ui";ctx.fillText("bereit",754,149);
+
+    ctx.strokeStyle="#54d2df";ctx.lineWidth=2;
+    ctx.beginPath();ctx.moveTo(792,145);ctx.lineTo(826,145);ctx.stroke();
+    ctx.fillStyle="#9fb5ca";ctx.font="10px system-ui";ctx.textAlign="center";
+    ctx.fillText("elektrisches Signal",808,198);
+
+    ctx.fillStyle="#10243a";ctx.strokeStyle="#58708a";
+    ctx.fillRect(827,119,55,52);ctx.strokeRect(827,119,55,52);
+    ctx.fillStyle="#e4eef7";ctx.font="bold 12px system-ui";ctx.fillText("A/D",854,140);
+    ctx.font="10px ui-monospace,monospace";ctx.fillStyle="#8ddce7";ctx.fillText("-----",854,158);
+
+    drawArrow(ctx,884,145,936,145,"digital");
+    ctx.strokeStyle="#8fa7bf";ctx.lineWidth=1.6;
+    ctx.beginPath();ctx.moveTo(936,145);ctx.lineTo(936,70);ctx.stroke();
+    ctx.fillStyle="#8fa7bf";
+    ctx.beginPath();ctx.moveTo(936,66);ctx.lineTo(930,76);ctx.lineTo(942,76);ctx.closePath();ctx.fill();
+
+    ctx.fillStyle="#d9e8f5";ctx.font="bold 11px system-ui";ctx.textAlign="right";
+    ctx.fillText("Chromatogramm",962,58);
+    ctx.fillStyle="#9fb5ca";ctx.font="10px system-ui";ctx.fillText("Auswertung oben",962,72);
+
+    ctx.textAlign="left";
+    ctx.fillStyle="#8ea4bd";ctx.font="11px system-ui";
+    ctx.fillText("Aufbau bereit · Mit „GC-Lauf starten“ wird die Probe injiziert und die Trennung synchron sichtbar.",130,229);
+    ctx.fillStyle="#72879d";ctx.font="10px system-ui";ctx.textAlign="right";
+    ctx.fillText("noch keine Probe injiziert",960,286);
+    ctx.textAlign="left";
+  }
+
 
   function processBandState(analyte,index,allAnalytes,currentTime){
     const progress=analyte.tr>0?Math.max(0,Math.min(1,currentTime/analyte.tr)):1;

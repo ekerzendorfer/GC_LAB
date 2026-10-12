@@ -78,3 +78,17 @@ footer{max-width:1500px;margin:0 auto;padding:0 22px 25px;color:#71869e;text-ali
 .ident-map-wrap{margin-top:12px}
 @media(max-width:1080px){.identification-card{grid-column:1/3}}
 @media(max-width:720px){.ident-workbench,.ident-assign{align-items:stretch;flex-direction:column}.ident-assign{min-width:0}.ident-assign button{width:100%}}
+
+
+/* v0.4.0 · schematische Trennprozess-Animation */
+.process-controls{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+.process-controls button.compact{width:auto;margin:0}
+.process-panel{display:none;margin-top:12px;padding:12px;border:1px solid var(--line);border-radius:12px;background:#081321}
+.process-panel.active{display:block}
+.process-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;margin-bottom:9px}
+.process-head strong{display:block;color:#dff7fa;margin-bottom:2px}
+.process-head span{display:block;color:var(--muted);font-size:.8rem}
+.process-badge{padding:4px 8px;border:1px solid rgba(96,165,250,.45);border-radius:999px;background:rgba(30,64,175,.16);white-space:nowrap}
+#processCanvas{display:block;width:100%;height:auto;border:1px solid rgba(42,61,88,.85);border-radius:10px;background:#06101b}
+.process-note{margin:8px 2px 0}
+@media(max-width:720px){.process-controls{flex-direction:column}.process-controls button.compact{width:100%}.process-head{flex-direction:column}}

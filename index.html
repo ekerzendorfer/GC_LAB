@@ -14,7 +14,7 @@
       <h1>GC-LAB</h1>
       <p>Gaschromatographie verstehen, Methoden entwickeln und Trennqualität beurteilen.</p>
     </div>
-    <div class="version">v0.3.2<br><small id="modeLabel">Single-Mode</small></div>
+    <div class="version">v0.4.0<br><small id="modeLabel">Single-Mode</small></div>
   </header>
 
   <div id="bridgeContext" class="bridge-context">
@@ -132,6 +132,22 @@
       <div id="methodFeedback" class="feedback neutral">
         Wähle eine Methode und starte den ersten Lauf.
       </div>
+
+      <div class="process-controls">
+        <button id="processToggleBtn" class="secondary compact" type="button" disabled>Trennprozess anzeigen</button>
+        <button id="processReplayBtn" class="secondary compact" type="button" disabled>Animation wiederholen</button>
+      </div>
+      <div id="processPanel" class="process-panel">
+        <div class="process-head">
+          <div>
+            <strong>Prinzipmodell der Trennung</strong>
+            <span>Injektor → Wechselwirkung mit stationärer Phase → Detektor → elektrisches Signal → A/D → Chromatogramm</span>
+          </div>
+          <span class="process-badge">schematisch</span>
+        </div>
+        <canvas id="processCanvas" width="980" height="300" aria-label="Schematische Animation des GC-Trennprozesses"></canvas>
+        <p class="hint process-note">Die Innenansicht ist ein didaktisches Modell. Wiederholte Wechselwirkung bzw. Verteilung an der stationären Phase wird symbolisch als Anlagerung und Ablösung dargestellt; sie ist kein maßstäbliches Molekülmodell und kein zusätzliches Messergebnis.</p>
+      </div>
     </section>
 
     <aside class="card results">
@@ -212,7 +228,7 @@
         <div><strong>Säulenlänge</strong><span>beeinflusst Effizienz und Laufzeit</span></div>
         <div><strong>Gasstrom</strong><span>beeinflusst Totzeit und Effizienz</span></div>
       </div>
-      <p class="hint">GC-LAB v0.3.2 verwendet bewusst kuratierte Modellparameter. Es ist kein universeller Retentionszeit-Rechner.</p>
+      <p class="hint">GC-LAB v0.4 verwendet bewusst kuratierte Modellparameter. Es ist kein universeller Retentionszeit-Rechner.</p>
     </section>
   </main>
 

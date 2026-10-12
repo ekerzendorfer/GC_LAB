@@ -1,7 +1,7 @@
 (() => {
   "use strict";
 
-  const VERSION = "0.3.2";
+  const VERSION = "0.4.0";
   const FLOW = {
     low: {label:"niedrig", value:0.8, efficiency:0.82},
     medium: {label:"mittel", value:1.2, efficiency:1.00},
@@ -35,6 +35,9 @@
   let animationSequence = 0;
   let identificationAnimation = null;
   let identificationSequence = 0;
+  let processVisible = false;
+  let processAnimation = null;
+  let processSequence = 0;
   const els = {};
 
   document.addEventListener("DOMContentLoaded", init);
@@ -79,7 +82,8 @@
       "verificationPanel","verificationHypothesis","verificationPeak","verificationMethod","standardRunBtn","spikeRunBtn",
       "standardEvidence","spikeEvidence","verificationLegend","verificationZoomCanvas","verificationZoomLegend",
       "identificationPanel","identMethodLabel","identIntro","identStandardButtons","identStandardTitle","identStandardInfo",
-      "identPeakSelect","identAssignBtn","identCanvas","identAssignmentFeedback","identMapBody"]
+      "identPeakSelect","identAssignBtn","identCanvas","identAssignmentFeedback","identMapBody",
+      "processToggleBtn","processReplayBtn","processPanel","processCanvas"]
       .forEach(id => els[id] = document.getElementById(id));
   }
 
@@ -122,7 +126,7 @@
 
   function bindEvents(){
     els.levelSelect.addEventListener("change",()=>{applyLevel(); populateSampleOptions(); updateInfo();});
-    els.sampleSelect.addEventListener("change",updateInfo);
+    els.sampleSelect.addEventListener("change",()=>{updateInfo(); resetProcessForSampleChange();});
     els.columnSelect.addEventListener("change",updateInfo);
     els.runBtn.addEventListener("click",runGc);
     els.historyTable.addEventListener("click",event=>{
@@ -138,6 +142,8 @@
       if(btn) runIdentificationStandard(btn.dataset.standardId);
     });
     els.identAssignBtn.addEventListener("click",assignIdentificationPeak);
+    els.processToggleBtn.addEventListener("click",toggleProcessPanel);
+    els.processReplayBtn.addEventListener("click",replayProcessAnimation);
   }
 
   function applyLevel(){
@@ -186,6 +192,7 @@
   function resetSession(){
     cancelRunAnimation();
     cancelIdentificationAnimation();
+    cancelProcessAnimation();
     history=[];
     lastRun=null;
     selectedHistoryIndex=null;
@@ -194,6 +201,7 @@
     resetMetrics();
     drawEmptyChromatogram();
     hideIdentification();
+    resetProcessView();
     setFeedback("Wähle eine Methode und starte den ersten Lauf.","neutral");
     updateBridgeAccept(null);
   }
@@ -308,6 +316,7 @@
   function runGc(){
     if(runInProgress) return;
     cancelIdentificationAnimation();
+    cancelProcessAnimation();
     hideIdentification();
     const run=simulate(currentSample(),method());
     const displayKey=els.displaySpeedSelect?.value || "observe";
@@ -332,6 +341,7 @@
     els.peakTable.innerHTML='<tr><td colspan="4" class="muted">Detektorsignal wird aufgezeichnet – Auswertung nach Laufende.</td></tr>';
     setFeedback("Probe injiziert. Das Chromatogramm entsteht entlang der chromatographischen Zeitachse. Bildschirmdarstellung: "+display.label+".","neutral");
     drawChromatogramProgress(run,0);
+    if(processVisible) drawProcessModel(run,0);
 
     const token=++animationSequence;
     const startedAt=performance.now();
@@ -341,6 +351,7 @@
       const elapsedSeconds=(now-startedAt)/1000;
       const currentTime=Math.min(run.runtime,elapsedSeconds*display.factor/60);
       drawChromatogramProgress(run,currentTime);
+      if(processVisible) drawProcessModel(run,currentTime);
       els.runStatus.textContent="Messung läuft · "+fmt(currentTime,2)+" min";
       els.runtimeMetric.textContent=fmt(currentTime,2)+" / "+fmt(run.runtime,2)+" min";
 
@@ -362,6 +373,7 @@
     setRunControlsLocked(false);
     renderRun(run);
     renderHistory();
+    updateProcessAvailability(run);
   }
 
   function renderRun(run){
@@ -401,6 +413,7 @@
     updateInfo();
 
     renderRun(run);
+    updateProcessAvailability(run);
     els.runStatus.textContent=`Run ${index+1} aus Historie`;
     renderHistory();
   }

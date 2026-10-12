@@ -504,7 +504,7 @@
 
     const token=++processSequence;
     const startedAt=performance.now();
-    const factor=12;
+    const factor=DISPLAY_SPEED.observe.factor;
     drawProcessModel(run,0);
 
     const step=now=>{
@@ -918,7 +918,7 @@
     state.activeSubstanceId=substanceId;
 
     els.identStandardTitle.textContent="Referenzstandard: "+sub.name_de+" · Messung läuft";
-    els.identStandardInfo.textContent="Referenzlauf unter unveränderten GC-Bedingungen · Schnellmodus 60×.";
+    els.identStandardInfo.textContent="Referenzlauf unter unveränderten GC-Bedingungen · Schnellmodus 40×.";
     els.identPeakSelect.disabled=true;
     els.identAssignBtn.disabled=true;
     [...els.identStandardButtons.querySelectorAll("button")].forEach(btn=>btn.disabled=true);
@@ -928,9 +928,9 @@
     const step=now=>{
       if(token!==identificationSequence) return;
       const elapsedSeconds=(now-startedAt)/1000;
-      const currentTime=Math.min(standardRun.runtime,elapsedSeconds);
+      const currentTime=Math.min(standardRun.runtime,elapsedSeconds*DISPLAY_SPEED.fast.factor/60);
       drawIdentificationComparison(run,standardRun,currentTime,false);
-      els.identStandardInfo.textContent="Referenzlauf: "+fmt(currentTime,2)+" / "+fmt(standardRun.runtime,2)+" min · Darstellung 60×";
+      els.identStandardInfo.textContent="Referenzlauf: "+fmt(currentTime,2)+" / "+fmt(standardRun.runtime,2)+" min · Darstellung 40×";
 
       if(currentTime>=standardRun.runtime){
         identificationAnimation=null;

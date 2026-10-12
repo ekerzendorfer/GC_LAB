@@ -1,6 +1,6 @@
 # GC-LAB
 
-**Version:** v0.3.2 – erste unbekannte Mischprobe GC-U01  
+**Version:** v0.4.0 – Trainingsserie unbekannter Proben und Trennprozess-Animation  
 **Projekt:** CHEMIE mit KI – Digitales Analytiklabor
 
 Browserbasiertes virtuelles Gaschromatographie-Labor ohne Build-Prozess und ohne Backend.
@@ -24,7 +24,6 @@ Der erste Stand konzentriert sich bewusst auf die fachliche Basis:
 
 ## Noch nicht enthalten
 
-- weitere unbekannte Mischproben mit verdeckter Zusammensetzung
 - frei erweiterbarer Referenzstandard-Pool für zusätzliche Hub-Substanzen
 - Temperaturprogramm
 - quantitative GC-Kalibration
@@ -226,3 +225,55 @@ Damit entsteht keine künstliche Mehrdeutigkeit durch das Simulationsmodell.
 ### Erweiterbarkeit
 
 GC-U01 ist als erster Prototyp für die weitere Serie `GC-Uxx` gedacht. Der Referenzpool bleibt von der internen Zusammensetzung getrennt. Neue kuratierte Einzelsubstanzen können später ergänzt werden, wenn weitere Single-Mode- oder Analytik-Hub-Proben sie benötigen.
+
+
+## v0.4.0 – Trainingsserie und Trennprozess-Animation
+
+### Unbekannte Proben GC-U01 bis GC-U05
+
+Der Single-Mode enthält jetzt fünf unbekannte Dreikomponentenproben. Jede Probe:
+
+- zeigt im UI nur einen neutralen Probencode,
+- enthält intern drei Komponenten,
+- bietet fünf Referenzstandards an,
+- enthält davon zwei geprüfte Negativkandidaten,
+- erfordert zuerst eine chromatographisch brauchbare Trennung und danach eine studentische Peakzuordnung.
+
+Die Proben sind bewusst unterschiedlich anspruchsvoll:
+
+- **GC-U02**: breiter Methodenraum, gut als Einstieg
+- **GC-U03 / GC-U04**: mittlerer Methodenanspruch
+- **GC-U05**: engerer Methodenraum und systematischere Optimierung
+- **GC-U01** bleibt als anspruchsvoller Pilotfall erhalten
+
+Für alle Negativkandidaten wurde der komplette Methodenraum geprüft, in dem die jeweilige Probe `R_s ≥ 1,5` erreicht. Innerhalb der verwendeten Zuordnungstoleranz entsteht kein falscher Treffer an einem echten Probenpeak.
+
+### Einblendbares Prinzipmodell der GC-Trennung
+
+Unterhalb des Chromatogramms kann nach dem ersten abgeschlossenen Single-Mode-Lauf **Trennprozess anzeigen** aktiviert werden.
+
+Das Prinzipmodell zeigt:
+
+- einen symbolischen Injektor,
+- Trägergas und mobile Phase,
+- ein stark vergrößertes gerades Säulenstück,
+- bis zu drei farblich getrennte Komponenten,
+- wiederholte Wechselwirkungs-/Retentionsphasen an der stationären Phase,
+- einen symbolischen Detektor,
+- das daraus entstehende elektrische Signal,
+- eine A/D-Stufe und die Weiterleitung zum Chromatogramm.
+
+Die Darstellung vermeidet bewusst die Aussage, dass jede GC-Trennung ausschließlich durch Oberflächenadsorption entsteht. Wechselwirkung bzw. Verteilung an der stationären Phase wird didaktisch als wiederholte Anlagerung und Ablösung symbolisiert.
+
+### Kopplung an den aktuellen Lauf
+
+Die Animation ist bereits qualitativ mit dem GC-Modell verbunden:
+
+- Retentionsreihenfolge und Laufzeiten stammen aus dem aktuellen Run,
+- die relative Wechselwirkungsstärke wird aus den Retentionsfaktoren abgeleitet,
+- die Bandenbreite orientiert sich an der simulierten Peakbreite,
+- am Detektor wird das aktuelle simulierte Signal verwendet.
+
+Bei unbekannten Proben wird die Innenansicht erst nach dem ersten abgeschlossenen Lauf freigeschaltet. Dadurch verrät sie vor der ersten Messung weder die Zahl der Komponenten noch deren Identitäten. Danach kann die Animation wiederholt werden oder bei einem weiteren Methodenlauf synchron mit dem entstehenden Chromatogramm mitlaufen.
+
+Die Komponentennamen werden in der Innenansicht nicht gezeigt; A/B/C sind reine Symbolbezeichnungen.

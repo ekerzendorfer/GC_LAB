@@ -1,5 +1,5 @@
 {
-  "schema_version": "0.3.2",
+  "schema_version": "0.4.0",
   "samples": [
     {
       "id": "SAMPLE_EA_BUOH_50",
@@ -159,6 +159,118 @@
         "METHANOL",
         "ETHANOL",
         "ETHYL_ACETATE",
+        "TOLUENE"
+      ]
+    },
+    {
+      "id": "GC_U02",
+      "name_de": "GC-U02 · unbekannte Mischprobe",
+      "description_de": "Unbekannte flüchtige Mischprobe. Entwickle eine robuste Trennmethode und identifiziere die Peaks anschließend mit Referenzstandards.",
+      "unknown": true,
+      "difficulty": "leicht",
+      "composition": [
+        {
+          "substance_id": "METHANOL",
+          "fraction": 0.3
+        },
+        {
+          "substance_id": "HEXANE",
+          "fraction": 0.4
+        },
+        {
+          "substance_id": "BUTAN_1_OL",
+          "fraction": 0.3
+        }
+      ],
+      "candidate_pool": [
+        "METHANOL",
+        "ETHANOL",
+        "HEXANE",
+        "CYCLOHEXANE",
+        "BUTAN_1_OL"
+      ]
+    },
+    {
+      "id": "GC_U03",
+      "name_de": "GC-U03 · unbekannte Mischprobe",
+      "description_de": "Unbekannte flüchtige Mischprobe mit mittlerem Methodenanspruch. Trenne sauber und prüfe mögliche Identitäten mit Referenzstandards.",
+      "unknown": true,
+      "difficulty": "mittel",
+      "composition": [
+        {
+          "substance_id": "METHANOL",
+          "fraction": 0.32
+        },
+        {
+          "substance_id": "ETHYL_ACETATE",
+          "fraction": 0.36
+        },
+        {
+          "substance_id": "TOLUENE",
+          "fraction": 0.32
+        }
+      ],
+      "candidate_pool": [
+        "METHANOL",
+        "ETHANOL",
+        "ETHYL_ACETATE",
+        "CYCLOHEXANE",
+        "TOLUENE"
+      ]
+    },
+    {
+      "id": "GC_U04",
+      "name_de": "GC-U04 · unbekannte Mischprobe",
+      "description_de": "Unbekannte flüchtige Mischprobe. Mehrere Methoden sind möglich, aber Selektivität und Auflösung müssen gezielt optimiert werden.",
+      "unknown": true,
+      "difficulty": "mittel",
+      "composition": [
+        {
+          "substance_id": "ACETONE",
+          "fraction": 0.28
+        },
+        {
+          "substance_id": "CYCLOHEXANE",
+          "fraction": 0.37
+        },
+        {
+          "substance_id": "TOLUENE",
+          "fraction": 0.35
+        }
+      ],
+      "candidate_pool": [
+        "ACETONE",
+        "ETHANOL",
+        "ETHYL_ACETATE",
+        "CYCLOHEXANE",
+        "TOLUENE"
+      ]
+    },
+    {
+      "id": "GC_U05",
+      "name_de": "GC-U05 · unbekannte Mischprobe",
+      "description_de": "Anspruchsvolle unbekannte Mischprobe. Eine saubere Trennung erfordert systematische Methodenentwicklung; anschließend folgt die Referenzidentifikation.",
+      "unknown": true,
+      "difficulty": "anspruchsvoll",
+      "composition": [
+        {
+          "substance_id": "ETHYL_ACETATE",
+          "fraction": 0.34
+        },
+        {
+          "substance_id": "CYCLOHEXANE",
+          "fraction": 0.31
+        },
+        {
+          "substance_id": "TOLUENE",
+          "fraction": 0.35
+        }
+      ],
+      "candidate_pool": [
+        "METHANOL",
+        "ETHANOL",
+        "ETHYL_ACETATE",
+        "CYCLOHEXANE",
         "TOLUENE"
       ]
     }

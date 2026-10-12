@@ -595,14 +595,52 @@
         const x=col.x0+18+(col.x1-col.x0-36)*state.progress;
         const wallTop=i%2===0;
         const y=state.bound?(wallTop?col.top+21:col.bottom-21):(center+(i-(analytes.length-1)/2)*24);
-        const spread=5+10*(a.width/maxWidth);
+        // Schematische Bandverbreiterung:
+        // - nimmt mit zurückgelegter Laufzeit zu
+        // - ist bei später eluierenden Komponenten stärker
+        // - erfolgt vor allem in Strömungsrichtung
+        const timeShare=Math.max(
+          0.10,
+          Math.min(1,currentTime/Math.max(run.runtime,0.01))
+        );
 
-        for(let p=0;p<7;p++){
-          const dx=(p-3)*spread/5;
-          const dy=((p%3)-1)*4;
-          ctx.globalAlpha=.82-Math.abs(p-3)*.06;
+        const retentionShare=Math.max(
+          0,
+          Math.min(1,a.tr/Math.max(run.runtime,0.01))
+        );
+
+        const widthShare=Math.max(
+          0,
+          Math.min(1,a.width/Math.max(maxWidth,0.001))
+        );
+
+        const spreadX=
+          7
+          +8*widthShare
+          +15*timeShare
+          +20*retentionShare*timeShare;
+
+        const spreadY=
+          3.5
+          +2.5*widthShare
+          +1.5*timeShare;
+
+        // Neun Teilchenpunkte ergeben eine längliche Stoffzone.
+        // Der hintere Teil wird geringfügig stärker auseinandergezogen.
+        for(let p=0;p<9;p++){
+          const rel=(p-4)/4;
+
+          const dx=rel<0
+            ? rel*spreadX*1.10
+            : rel*spreadX*0.90;
+
+          const dy=((p%3)-1)*spreadY;
+
+          ctx.globalAlpha=.86-Math.abs(rel)*.18;
           ctx.fillStyle=color;
-          ctx.beginPath();ctx.arc(x+dx,y+dy,5,0,Math.PI*2);ctx.fill();
+          ctx.beginPath();
+          ctx.arc(x+dx,y+dy,4.6,0,Math.PI*2);
+          ctx.fill();
         }
         ctx.globalAlpha=1;
         ctx.fillStyle=color;ctx.font="bold 12px system-ui";ctx.textAlign="center";

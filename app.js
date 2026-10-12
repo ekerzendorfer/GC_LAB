@@ -125,7 +125,7 @@
   }
 
   function bindEvents(){
-    els.levelSelect.addEventListener("change",()=>{applyLevel(); populateSampleOptions(); updateInfo();});
+    els.levelSelect.addEventListener("change",()=>{applyLevel(); populateSampleOptions(); updateInfo(); resetProcessForSampleChange();});
     els.sampleSelect.addEventListener("change",()=>{updateInfo(); resetProcessForSampleChange();});
     els.columnSelect.addEventListener("change",updateInfo);
     els.runBtn.addEventListener("click",runGc);
@@ -416,6 +416,252 @@
     updateProcessAvailability(run);
     els.runStatus.textContent=`Run ${index+1} aus Historie`;
     renderHistory();
+  }
+
+
+  function processAvailable(run){
+    return !!(!bridgeMode && run && run.analytes.length>=2 && run.analytes.length<=3);
+  }
+
+  function cancelProcessAnimation(){
+    processSequence++;
+    if(processAnimation!==null){
+      cancelAnimationFrame(processAnimation);
+      processAnimation=null;
+    }
+    if(els.processReplayBtn){
+      els.processReplayBtn.textContent="Animation wiederholen";
+      els.processReplayBtn.disabled=!processAvailable(lastRun);
+    }
+  }
+
+  function resetProcessView(){
+    processVisible=false;
+    if(els.processPanel) els.processPanel.classList.remove("active");
+    if(els.processToggleBtn){
+      els.processToggleBtn.textContent="Trennprozess anzeigen";
+      els.processToggleBtn.disabled=true;
+    }
+    if(els.processReplayBtn){
+      els.processReplayBtn.textContent="Animation wiederholen";
+      els.processReplayBtn.disabled=true;
+    }
+  }
+
+  function resetProcessForSampleChange(){
+    cancelProcessAnimation();
+    resetProcessView();
+  }
+
+  function updateProcessAvailability(run){
+    const available=processAvailable(run);
+    els.processToggleBtn.disabled=!available;
+    els.processReplayBtn.disabled=!available;
+    if(!available){
+      processVisible=false;
+      els.processPanel.classList.remove("active");
+      els.processToggleBtn.textContent="Trennprozess anzeigen";
+      return;
+    }
+    if(processVisible){
+      els.processPanel.classList.add("active");
+      els.processToggleBtn.textContent="Trennprozess ausblenden";
+      drawProcessModel(run,run.runtime);
+    }
+  }
+
+  function toggleProcessPanel(){
+    if(!processAvailable(lastRun)) return;
+    cancelProcessAnimation();
+    processVisible=!processVisible;
+    els.processPanel.classList.toggle("active",processVisible);
+    els.processToggleBtn.textContent=processVisible?"Trennprozess ausblenden":"Trennprozess anzeigen";
+    if(processVisible) drawProcessModel(lastRun,lastRun.runtime);
+  }
+
+  function replayProcessAnimation(){
+    const run=lastRun;
+    if(!processAvailable(run)) return;
+    cancelProcessAnimation();
+    processVisible=true;
+    els.processPanel.classList.add("active");
+    els.processToggleBtn.textContent="Trennprozess ausblenden";
+    els.processReplayBtn.disabled=true;
+    els.processReplayBtn.textContent="Animation läuft …";
+
+    const token=++processSequence;
+    const startedAt=performance.now();
+    const factor=12;
+    drawProcessModel(run,0);
+
+    const step=now=>{
+      if(token!==processSequence) return;
+      const elapsedSeconds=(now-startedAt)/1000;
+      const currentTime=Math.min(run.runtime,elapsedSeconds*factor/60);
+      drawProcessModel(run,currentTime);
+      if(currentTime>=run.runtime){
+        processAnimation=null;
+        els.processReplayBtn.disabled=false;
+        els.processReplayBtn.textContent="Animation wiederholen";
+        return;
+      }
+      processAnimation=requestAnimationFrame(step);
+    };
+    processAnimation=requestAnimationFrame(step);
+  }
+
+  function processBandState(analyte,index,count,currentTime){
+    const progress=analyte.tr>0?Math.max(0,Math.min(1,currentTime/analyte.tr)):1;
+    const ks=lastRun?.analytes?.slice(0,3).map(a=>a.k) || [];
+    const minK=ks.length?Math.min(...ks):0;
+    const maxK=ks.length?Math.max(...ks):1;
+    const strength=maxK>minK?(analyte.k-minK)/(maxK-minK):(count>1?index/(count-1):0.5);
+    const mobileShare=0.72-0.34*strength;
+    const cycles=7;
+
+    if(progress>=1) return {progress:1,bound:false,strength};
+    const scaled=progress*cycles;
+    const segment=Math.floor(scaled);
+    const local=scaled-segment;
+    const bound=local>=mobileShare;
+    const within=bound?1:local/mobileShare;
+    const position=Math.min(1,(segment+within)/cycles);
+    return {progress:position,bound,strength};
+  }
+
+  function drawArrow(ctx,x1,y1,x2,y2,label){
+    ctx.strokeStyle="#8fa7bf";ctx.fillStyle="#8fa7bf";ctx.lineWidth=1.6;
+    ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke();
+    const angle=Math.atan2(y2-y1,x2-x1),s=7;
+    ctx.beginPath();
+    ctx.moveTo(x2,y2);
+    ctx.lineTo(x2-s*Math.cos(angle-Math.PI/6),y2-s*Math.sin(angle-Math.PI/6));
+    ctx.lineTo(x2-s*Math.cos(angle+Math.PI/6),y2-s*Math.sin(angle+Math.PI/6));
+    ctx.closePath();ctx.fill();
+    if(label){
+      ctx.font="11px system-ui";ctx.fillStyle="#a9bad0";ctx.textAlign="center";
+      ctx.fillText(label,(x1+x2)/2,(y1+y2)/2-7);
+      ctx.textAlign="left";
+    }
+  }
+
+  function drawProcessModel(run,currentTime){
+    if(!els.processCanvas || !run) return;
+    const canvas=els.processCanvas,ctx=canvas.getContext("2d");
+    const W=canvas.width,H=canvas.height;
+    ctx.clearRect(0,0,W,H);
+    ctx.fillStyle="#06101b";ctx.fillRect(0,0,W,H);
+
+    const colors=["#60a5fa","#fbbf24","#fb7185"];
+    const labels=["A","B","C"];
+    const analytes=run.analytes.slice(0,3);
+    const col={x0:130,x1:690,top:82,bottom:202};
+    const center=(col.top+col.bottom)/2;
+
+    ctx.fillStyle="#0c1d30";ctx.strokeStyle="#4b647f";ctx.lineWidth=2;
+    ctx.fillRect(24,108,78,70);ctx.strokeRect(24,108,78,70);
+    ctx.fillStyle="#d9e8f5";ctx.font="bold 13px system-ui";ctx.textAlign="center";
+    ctx.fillText("Injektor",63,100);
+    ctx.fillStyle="#8ea4bd";ctx.font="11px system-ui";ctx.fillText("Probe",63,149);
+
+    drawArrow(ctx,103,143,col.x0-6,143,"Trägergas");
+
+    ctx.fillStyle="#091827";ctx.strokeStyle="#59728c";ctx.lineWidth=2;
+    ctx.fillRect(col.x0,col.top,col.x1-col.x0,col.bottom-col.top);
+    ctx.strokeRect(col.x0,col.top,col.x1-col.x0,col.bottom-col.top);
+
+    ctx.fillStyle="rgba(96,165,250,.13)";
+    ctx.fillRect(col.x0+2,col.top+2,col.x1-col.x0-4,17);
+    ctx.fillRect(col.x0+2,col.bottom-19,col.x1-col.x0-4,17);
+    ctx.fillStyle="#9fb5ca";ctx.font="11px system-ui";ctx.textAlign="left";
+    ctx.fillText("stationäre Phase",col.x0+8,col.top-9);
+    ctx.fillText("mobile Phase / Trägergas",col.x0+218,center+4);
+
+    for(let x=col.x0+20;x<col.x1-10;x+=36){
+      ctx.strokeStyle="rgba(96,165,250,.20)";ctx.lineWidth=2;
+      ctx.beginPath();ctx.moveTo(x,col.top+5);ctx.lineTo(x+8,col.top+14);ctx.stroke();
+      ctx.beginPath();ctx.moveTo(x,col.bottom-5);ctx.lineTo(x+8,col.bottom-14);ctx.stroke();
+    }
+
+    const maxWidth=Math.max(...analytes.map(a=>a.width),1e-6);
+    analytes.forEach((a,i)=>{
+      const state=processBandState(a,i,analytes.length,currentTime);
+      const color=colors[i%colors.length];
+      const arrived=currentTime>=a.tr;
+      if(!arrived){
+        const x=col.x0+18+(col.x1-col.x0-36)*state.progress;
+        const wallTop=i%2===0;
+        const y=state.bound?(wallTop?col.top+21:col.bottom-21):(center+(i-(analytes.length-1)/2)*24);
+        const spread=5+10*(a.width/maxWidth);
+
+        for(let p=0;p<7;p++){
+          const dx=(p-3)*spread/5;
+          const dy=((p%3)-1)*4;
+          ctx.globalAlpha=.82-Math.abs(p-3)*.06;
+          ctx.fillStyle=color;
+          ctx.beginPath();ctx.arc(x+dx,y+dy,5,0,Math.PI*2);ctx.fill();
+        }
+        ctx.globalAlpha=1;
+        ctx.fillStyle=color;ctx.font="bold 12px system-ui";ctx.textAlign="center";
+        ctx.fillText(labels[i],x,y-12);
+        if(state.bound){
+          ctx.fillStyle="#c8d7e6";ctx.font="10px system-ui";
+          ctx.fillText("Retention",x,wallTop?col.top+43:col.bottom-32);
+        }
+      }
+    });
+
+    ctx.fillStyle="#0c1d30";ctx.strokeStyle="#4b647f";ctx.lineWidth=2;
+    ctx.fillRect(716,105,76,78);ctx.strokeRect(716,105,76,78);
+    ctx.fillStyle="#d9e8f5";ctx.font="bold 13px system-ui";ctx.textAlign="center";
+    ctx.fillText("Detektor",754,98);
+
+    analytes.forEach((a,i)=>{
+      if(currentTime>=a.tr){
+        ctx.fillStyle=colors[i%colors.length];
+        ctx.beginPath();ctx.arc(737+i*17,145,5,0,Math.PI*2);ctx.fill();
+      }
+    });
+
+    const signalIndex=Math.max(0,Math.min(run.points.length-1,Math.round((run.points.length-1)*Math.min(currentTime,run.runtime)/run.runtime)));
+    const signal=run.points[signalIndex]?.y||0;
+    const maxSignal=Math.max(...run.points.map(p=>p.y),1e-6);
+    const pulse=34*signal/maxSignal;
+    ctx.strokeStyle="#54d2df";ctx.lineWidth=2;
+    ctx.beginPath();ctx.moveTo(792,145);ctx.lineTo(803,145);ctx.lineTo(811,145-pulse);ctx.lineTo(819,145);ctx.lineTo(826,145);ctx.stroke();
+    ctx.fillStyle="#9fb5ca";ctx.font="10px system-ui";ctx.textAlign="center";
+    ctx.fillText("elektrisches Signal",808,198);
+
+    ctx.fillStyle="#10243a";ctx.strokeStyle="#58708a";
+    ctx.fillRect(827,119,55,52);ctx.strokeRect(827,119,55,52);
+    ctx.fillStyle="#e4eef7";ctx.font="bold 12px system-ui";ctx.fillText("A/D",854,140);
+    ctx.font="10px ui-monospace,monospace";ctx.fillStyle="#8ddce7";ctx.fillText("10110",854,158);
+
+    drawArrow(ctx,884,145,936,145,"digital");
+    ctx.strokeStyle="#8fa7bf";ctx.lineWidth=1.6;
+    ctx.beginPath();ctx.moveTo(936,145);ctx.lineTo(936,70);ctx.stroke();
+    ctx.fillStyle="#8fa7bf";
+    ctx.beginPath();ctx.moveTo(936,66);ctx.lineTo(930,76);ctx.lineTo(942,76);ctx.closePath();ctx.fill();
+    ctx.fillStyle="#d9e8f5";ctx.font="bold 11px system-ui";ctx.textAlign="right";
+    ctx.fillText("Chromatogramm",962,58);
+    ctx.fillStyle="#9fb5ca";ctx.font="10px system-ui";ctx.fillText("Auswertung oben",962,72);
+
+    ctx.textAlign="left";
+    ctx.fillStyle="#8ea4bd";ctx.font="11px system-ui";
+    ctx.fillText("Wechselwirkung / Retention: Teilchen werden symbolisch an der stationären Phase aufgehalten und wieder abgelöst.",130,229);
+
+    analytes.forEach((a,i)=>{
+      const x=132+i*185;
+      ctx.fillStyle=colors[i%colors.length];ctx.beginPath();ctx.arc(x,257,5,0,Math.PI*2);ctx.fill();
+      ctx.fillStyle="#c7d6e5";ctx.font="11px system-ui";
+      const state=processBandState(a,i,analytes.length,Math.min(currentTime,a.tr*.999));
+      const strength=state.strength<.34?"schwächer":(state.strength<.67?"mittel":"stärker");
+      ctx.fillText(labels[i]+" · "+strength+"e Wechselwirkung",x+10,261);
+    });
+
+    ctx.fillStyle="#72879d";ctx.font="10px system-ui";ctx.textAlign="right";
+    ctx.fillText("t = "+fmt(Math.min(currentTime,run.runtime),2)+" min",960,286);
+    ctx.textAlign="left";
   }
 
 

@@ -250,7 +250,7 @@ Für alle Negativkandidaten wurde der komplette Methodenraum geprüft, in dem di
 
 ### Einblendbares Prinzipmodell der GC-Trennung
 
-Unterhalb des Chromatogramms kann nach dem ersten abgeschlossenen Single-Mode-Lauf **Trennprozess anzeigen** aktiviert werden.
+Unterhalb des Chromatogramms kann **Trennprozess anzeigen** bereits vor dem ersten Single-Mode-Lauf aktiviert werden. Vor der Injektion ist nur der leere GC-Aufbau sichtbar; mit dem ersten Lauf startet die Prozessdarstellung synchron mit dem entstehenden Chromatogramm.
 
 Das Prinzipmodell zeigt:
 
@@ -274,6 +274,17 @@ Die Animation ist bereits qualitativ mit dem GC-Modell verbunden:
 - die Bandenbreite orientiert sich an der simulierten Peakbreite,
 - am Detektor wird das aktuelle simulierte Signal verwendet.
 
-Bei unbekannten Proben wird die Innenansicht erst nach dem ersten abgeschlossenen Lauf freigeschaltet. Dadurch verrät sie vor der ersten Messung weder die Zahl der Komponenten noch deren Identitäten. Danach kann die Animation wiederholt werden oder bei einem weiteren Methodenlauf synchron mit dem entstehenden Chromatogramm mitlaufen.
+Bei unbekannten Proben zeigt die vorab geöffnete Innenansicht zunächst nur den leeren Aufbau. Erst mit der Injektion werden die neutral bezeichneten Komponenten A/B/C sichtbar. Die Ansicht ist damit bewusst als Lernhilfe nutzbar; Stoffidentitäten werden nicht verraten. Nach dem Lauf kann die Animation wiederholt werden oder bei einem weiteren Methodenlauf synchron mit dem entstehenden Chromatogramm mitlaufen.
 
 Die Komponentennamen werden in der Innenansicht nicht gezeigt; A/B/C sind reine Symbolbezeichnungen.
+
+### Darstellungsgeschwindigkeiten ab v0.4
+
+Für eine besser beobachtbare Prozessdarstellung wurden die Bildschirmgeschwindigkeiten reduziert:
+
+- **Beobachten · 8×** – Standard für Unterricht und Prozessanimation
+- **Schnell · 40×** – zügige Methodenentwicklung
+- **Sofort · Ergebnisansicht** – ohne zeitliche Darstellung
+
+Auch Referenzstandard-Läufe verwenden jetzt 40×. Die Funktion **Animation wiederholen** nutzt 8×.
+

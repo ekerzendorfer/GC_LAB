@@ -1,7 +1,7 @@
 (() => {
   "use strict";
 
-  const VERSION = "0.4.0";
+  const VERSION = "0.5.0";
   const FLOW = {
     low: {label:"niedrig", value:0.8, efficiency:0.82},
     medium: {label:"mittel", value:1.2, efficiency:1.00},
@@ -38,6 +38,10 @@
   let processVisible = false;
   let processAnimation = null;
   let processSequence = 0;
+  let activeTaskId = null;
+  let taskStage = 0;
+  let taskMilestones = {};
+  let taskCompleted = false;
   const els = {};
 
   document.addEventListener("DOMContentLoaded", init);
@@ -72,7 +76,13 @@
     }
     drawEmptyChromatogram();
     resetProcessView();
-    if(bridgeMode) await initAnalytikBridge();
+    if(bridgeMode){
+      await initAnalytikBridge();
+    }else{
+      if(els.taskPanel) els.taskPanel.hidden=false;
+      const requestedTask=new URLSearchParams(window.location.search).get("task");
+      if(requestedTask==="GC01" || requestedTask==="GC02") startTask(requestedTask);
+    }
   }
 
   function bindEls(){
@@ -84,7 +94,9 @@
       "standardEvidence","spikeEvidence","verificationLegend","verificationZoomCanvas","verificationZoomLegend",
       "identificationPanel","identMethodLabel","identIntro","identStandardButtons","identStandardTitle","identStandardInfo",
       "identPeakSelect","identAssignBtn","identCanvas","identAssignmentFeedback","identMapBody",
-      "processToggleBtn","processReplayBtn","processPanel","processCanvas"]
+      "processToggleBtn","processReplayBtn","processPanel","processCanvas",
+      "taskPanel","taskFreeBtn","taskWorkspace","taskBadges","taskTitle","taskGoal","taskProgress","taskSteps",
+      "taskInstruction","taskFeedback","taskReflection","taskReflectionText","taskFinishBtn","taskSummary"]
       .forEach(id => els[id] = document.getElementById(id));
   }
 
@@ -145,6 +157,9 @@
     els.identAssignBtn.addEventListener("click",assignIdentificationPeak);
     els.processToggleBtn.addEventListener("click",toggleProcessPanel);
     els.processReplayBtn.addEventListener("click",replayProcessAnimation);
+    document.querySelectorAll("[data-task-start]").forEach(btn=>btn.addEventListener("click",()=>startTask(btn.dataset.taskStart)));
+    if(els.taskFreeBtn) els.taskFreeBtn.addEventListener("click",stopTask);
+    if(els.taskFinishBtn) els.taskFinishBtn.addEventListener("click",finishTask);
   }
 
   function applyLevel(){
@@ -166,6 +181,7 @@
       els.sampleSelect.disabled=true;
     }
     if(verificationMode) setMethodControls(verificationMethodFromInput());
+    applyTaskControlLocks();
   }
 
   function setRunControlsLocked(locked){
@@ -191,6 +207,7 @@
   }
 
   function resetSession(){
+    const taskToRestart=activeTaskId;
     cancelRunAnimation();
     cancelIdentificationAnimation();
     cancelProcessAnimation();
@@ -205,6 +222,7 @@
     resetProcessView();
     setFeedback("Wähle eine Methode und starte den ersten Lauf.","neutral");
     updateBridgeAccept(null);
+    if(taskToRestart) startTask(taskToRestart,{skipReset:true});
   }
 
   function updateInfo(){
@@ -377,6 +395,7 @@
     renderRun(run);
     renderHistory();
     updateProcessAvailability(run);
+    updateTaskAfterRun(run);
   }
 
   function renderRun(run){
@@ -403,6 +422,7 @@
 
   function showHistoryRun(index){
     if(runInProgress) return;
+    if(activeTaskId && !taskCompleted && !(activeTaskId==="GC01" && taskStage>=4)) return;
     const run=history[index];
     if(!run) return;
     selectedHistoryIndex=index;
@@ -893,10 +913,14 @@
       els.identAssignmentFeedback.textContent=run.sample.unknown
         ? run.sample.name_de+" vollständig entziffert. Identifizierte Komponenten: "+identities.join(", ")+"."
         : "Chromatogramm vollständig entziffert: Alle Probenpeaks sind durch Referenzläufe zugeordnet.";
+      if(activeTaskId==="GC02" && !taskAllCandidatesChecked(run,state)){
+        els.identAssignmentFeedback.textContent+=" Für GC-02 müssen zusätzlich die übrigen Referenzkandidaten als Negativkontrollen geprüft werden.";
+      }
     }else if(!activeId){
       els.identAssignmentFeedback.className="feedback neutral";
       els.identAssignmentFeedback.textContent="Noch keine Peakzuordnung.";
     }
+    if(activeTaskId==="GC02") updateTaskIdentification(run,state);
   }
 
   function runIdentificationStandard(substanceId){
@@ -1467,6 +1491,329 @@
 
     const completed=window.AnalytikBridge.completeRun(bridgeRun.run_id,result);
     window.AnalytikBridge.returnToHub(completed);
+  }
+
+  function taskRunMatches(run,expected){
+    if(!run || !run.method) return false;
+    return Object.entries(expected).every(([key,value])=>{
+      if(key==="temperature_c") return Number(run.method.temperature_c)===Number(value);
+      if(key==="length_m") return Number(run.method.length_m)===Number(value);
+      return run.method[key]===value;
+    });
+  }
+
+  function methodText(run){
+    if(!run) return "–";
+    const phase=run.method.column_id==="COLUMN_NP"?"unpolar":"polar";
+    return phase+" · "+run.method.length_m+" m · "+run.method.temperature_c+" °C · "+FLOW[run.method.flow_key].label+
+      " · Rₛ "+(run.minRs===null?"–":fmt(run.minRs,2))+" · "+fmt(run.runtime,2)+" min";
+  }
+
+  function taskAllCandidatesChecked(run,state){
+    if(!run || !state) return false;
+    const candidates=identificationCandidateIds(run);
+    return candidates.length>0 && candidates.every(id=>Object.prototype.hasOwnProperty.call(state.assignments,id));
+  }
+
+  function startTask(id,options={}){
+    if(bridgeMode || !["GC01","GC02"].includes(id)) return;
+    if(!options.skipReset){
+      activeTaskId=null;
+      resetSession();
+    }
+    activeTaskId=id;
+    taskStage=0;
+    taskMilestones={};
+    taskCompleted=false;
+    document.body.classList.add("task-active");
+    if(els.taskWorkspace) els.taskWorkspace.hidden=false;
+    if(els.taskReflectionText) els.taskReflectionText.value="";
+    if(els.taskSummary) els.taskSummary.hidden=true;
+
+    els.levelSelect.value="method";
+    populateSampleOptions();
+
+    if(id==="GC01"){
+      els.sampleSelect.value="SAMPLE_EA_BUOH_50";
+      els.columnSelect.value="COLUMN_NP";
+      els.lengthSelect.value="15";
+      els.temperatureSelect.value="140";
+      els.flowSelect.value="high";
+      els.displaySpeedSelect.value="observe";
+      processVisible=true;
+      els.processPanel.classList.add("active");
+      els.processToggleBtn.textContent="Trennprozess ausblenden";
+      drawProcessSetup();
+      els.modeLabel.textContent="Single-Mode · GC-01";
+    }else{
+      els.sampleSelect.value="GC_U02";
+      els.columnSelect.value="COLUMN_NP";
+      els.lengthSelect.value="15";
+      els.temperatureSelect.value="120";
+      els.flowSelect.value="high";
+      els.displaySpeedSelect.value="fast";
+      processVisible=false;
+      els.processPanel.classList.remove("active");
+      els.processToggleBtn.textContent="Trennprozess anzeigen";
+      els.modeLabel.textContent="Single-Mode · GC-02";
+    }
+    updateInfo();
+    renderTaskWorkspace();
+    applyTaskControlLocks();
+  }
+
+  function stopTask(){
+    if(bridgeMode) return;
+    activeTaskId=null;
+    taskStage=0;
+    taskMilestones={};
+    taskCompleted=false;
+    document.body.classList.remove("task-active");
+    if(els.taskWorkspace) els.taskWorkspace.hidden=true;
+    els.modeLabel.textContent="Single-Mode";
+    resetSession();
+    populateSampleOptions();
+    updateInfo();
+    restoreControlLocks();
+  }
+
+  function applyTaskControlLocks(){
+    if(!activeTaskId || bridgeMode) return;
+    els.levelSelect.disabled=true;
+    els.sampleSelect.disabled=true;
+
+    if(activeTaskId==="GC01"){
+      els.columnSelect.disabled=true;
+      els.lengthSelect.disabled=true;
+      els.temperatureSelect.disabled=true;
+      els.flowSelect.disabled=true;
+      if(taskCompleted || taskStage>=4) return;
+      if(taskStage===1) els.temperatureSelect.disabled=false;
+      if(taskStage===2) els.flowSelect.disabled=false;
+      if(taskStage===3) els.lengthSelect.disabled=false;
+    }else if(activeTaskId==="GC02"){
+      const lockMethod=taskStage>=1 || taskCompleted;
+      els.columnSelect.disabled=lockMethod;
+      els.lengthSelect.disabled=lockMethod;
+      els.temperatureSelect.disabled=lockMethod;
+      els.flowSelect.disabled=lockMethod;
+    }
+  }
+
+  function gc01Steps(){
+    return [
+      ["Startlauf","bewusst schlechte Ausgangsmethode"],
+      ["Temperatur","Retention und Auflösung verbessern"],
+      ["Gasstrom","Effizienz vergleichen"],
+      ["Säulenlänge","Auflösung gegen Laufzeit abwägen"],
+      ["Bilanz","beste Methode begründen"]
+    ];
+  }
+
+  function gc02Steps(){
+    return [
+      ["Methode entwickeln","eine brauchbare Trennung mit Rₛ ≥ 1,5 erreichen"],
+      ["Identifizieren","alle fünf Referenzkandidaten prüfen"],
+      ["Abschluss","Peaks und Negativkontrollen begründet zuordnen"]
+    ];
+  }
+
+  function renderTaskSteps(steps,stage){
+    els.taskSteps.innerHTML=steps.map((step,index)=>{
+      const cls=index<stage?"done":(index===stage&&!taskCompleted?"active":"");
+      return '<div class="task-step '+cls+'"><strong>'+(index<stage?"✓ ":"")+(index+1)+" · "+step[0]+'</strong><span>'+step[1]+'</span></div>';
+    }).join("");
+  }
+
+  function renderTaskWorkspace(){
+    if(!activeTaskId || !els.taskWorkspace) return;
+    if(activeTaskId==="GC01"){
+      els.taskBadges.innerHTML="<span>GC-01</span><span>geführt</span><span>Einstieg</span>";
+      els.taskTitle.textContent="Wie entsteht eine gute Trennung?";
+      els.taskGoal.textContent="Vergleiche gezielt Temperatur, Gasstrom und Säulenlänge. Verändere jeweils nur den freigegebenen Parameter und nutze die Versuchshistorie als Beleg.";
+      els.taskProgress.textContent=taskCompleted?"abgeschlossen":Math.min(taskStage+1,5)+" / 5";
+      renderTaskSteps(gc01Steps(),taskStage);
+      els.taskReflection.hidden=!(taskStage>=4 && !taskCompleted);
+
+      if(taskCompleted){
+        els.taskInstruction.innerHTML="<strong>Aufgabe abgeschlossen.</strong> Die Methodenbilanz fasst deinen Vergleich zusammen.";
+        els.taskFeedback.className="feedback good";
+        els.taskFeedback.textContent="GC-01 vollständig bearbeitet.";
+        return;
+      }
+
+      const instructions=[
+        "<strong>1 · Ausgangsversuch</strong> Die Startmethode ist bewusst ungünstig eingestellt: unpolare Säule · 15 m · 140 °C · hoher Gasstrom. Starte den GC-Lauf und beobachte auch das Prinzipmodell. Notiere besonders min. Rₛ und Laufzeit.",
+        "<strong>2 · Nur die Temperatur verändern</strong> Senke die Ofentemperatur so weit, bis die Trennung deutlich besser wird. Alle anderen Methodenparameter bleiben gesperrt. Ziel dieses Schrittes: min. Rₛ ungefähr 1,5 oder besser.",
+        "<strong>3 · Gasstrom vergleichen</strong> Die Temperatur bleibt jetzt unverändert. Stelle den Gasstrom auf <em>mittel</em> und führe erneut einen Lauf durch. Vergleiche Auflösung und Laufzeit mit dem vorherigen Run.",
+        "<strong>4 · Säulenlänge vergleichen</strong> Temperatur und Gasstrom bleiben unverändert. Ändere die Säulenlänge von 15 m auf 30 m. Prüfe, was mit Rₛ und Laufzeit geschieht.",
+        "<strong>5 · Methodenbilanz</strong> Vergleiche die Läufe in der Versuchshistorie. Begründe, welche analytisch brauchbare Methode für dich den besten Kompromiss aus Auflösung und Laufzeit darstellt."
+      ];
+      els.taskInstruction.innerHTML=instructions[Math.min(taskStage,4)];
+      if(taskStage===0){
+        els.taskFeedback.className="feedback neutral";
+        els.taskFeedback.textContent="Starte den vorgegebenen Ausgangslauf.";
+      }
+    }else{
+      els.taskBadges.innerHTML="<span>GC-02</span><span>offener</span><span>Fortgeschritten</span>";
+      els.taskTitle.textContent="Eine unbekannte Mischprobe untersuchen";
+      els.taskGoal.textContent="Bearbeite GC-U02 wie eine echte unbekannte Probe: zuerst eine geeignete GC-Methode entwickeln, danach die Peaks ausschließlich über Referenzläufe identifizieren.";
+      els.taskProgress.textContent=taskCompleted?"abgeschlossen":(taskStage===0?"1 / 3":"2 / 3");
+      renderTaskSteps(gc02Steps(),taskCompleted?3:taskStage);
+      els.taskReflection.hidden=true;
+
+      if(taskCompleted){
+        els.taskInstruction.innerHTML="<strong>Aufgabe abgeschlossen.</strong> Eine unbekannte Probe wurde zuerst chromatographisch getrennt und anschließend mit positiven und negativen Referenzbefunden identifiziert.";
+        els.taskFeedback.className="feedback good";
+        els.taskFeedback.textContent="GC-02 vollständig bearbeitet.";
+      }else if(taskStage===0){
+        els.taskInstruction.innerHTML="<strong>1 · Methode entwickeln</strong> GC-U02 enthält drei unbekannte flüchtige Komponenten. Alle vier Methodenparameter sind freigegeben. Entwickle selbstständig eine Methode mit <strong>min. Rₛ ≥ 1,5</strong>. Verändere möglichst systematisch und nutze die Historie.";
+        els.taskFeedback.className="feedback neutral";
+        els.taskFeedback.textContent="Die Ausgangsmethode trennt absichtlich nicht ausreichend. Finde selbst einen analytisch brauchbaren Weg.";
+      }else{
+        els.taskInstruction.innerHTML="<strong>2 · Chromatogramm entziffern</strong> Die Methode ist jetzt fixiert. Messe die fünf angebotenen Referenzstandards unter exakt denselben Bedingungen. Ordne passende Standards den Peaks zu und kennzeichne nicht passende Kandidaten ausdrücklich als „kein passender Peak“.";
+      }
+    }
+    applyTaskControlLocks();
+  }
+
+  function updateTaskAfterRun(run){
+    if(!activeTaskId || taskCompleted) return;
+    if(activeTaskId==="GC01"){
+      if(taskStage===0){
+        if(taskRunMatches(run,{column_id:"COLUMN_NP",length_m:15,temperature_c:140,flow_key:"high"})){
+          taskMilestones.baseline=run;
+          taskStage=1;
+          els.taskFeedback.className="feedback warn";
+          els.taskFeedback.textContent="Ausgangslauf: Rₛ = "+fmt(run.minRs,2)+". Die Peaks sind nicht ausreichend getrennt. Untersuche jetzt ausschließlich den Temperatureinfluss.";
+        }
+      }else if(taskStage===1){
+        const base=taskMilestones.baseline;
+        const valid=taskRunMatches(run,{column_id:"COLUMN_NP",length_m:15,flow_key:"high"}) &&
+          Number(run.method.temperature_c)<140 && run.minRs!==null && run.minRs>=1.45 &&
+          (!base || run.minRs>base.minRs);
+        if(valid){
+          taskMilestones.temperature=run;
+          taskStage=2;
+          els.taskFeedback.className="feedback good";
+          els.taskFeedback.textContent="Temperaturvergleich gelungen: Rₛ ist auf "+fmt(run.minRs,2)+" gestiegen. Jetzt bleibt diese Temperatur fixiert; untersuche den Gasstrom.";
+        }else{
+          els.taskFeedback.className="feedback warn";
+          els.taskFeedback.textContent="Die Trennung ist besser, aber für diesen Lernschritt noch nicht deutlich genug. Senke die Temperatur weiter, bis Rₛ etwa 1,5 oder größer ist.";
+        }
+      }else if(taskStage===2){
+        const prev=taskMilestones.temperature;
+        const valid=prev && taskRunMatches(run,{
+          column_id:"COLUMN_NP",length_m:15,temperature_c:prev.method.temperature_c,flow_key:"medium"
+        });
+        if(valid){
+          taskMilestones.flow=run;
+          taskStage=3;
+          els.taskFeedback.className="feedback good";
+          els.taskFeedback.textContent="Mittlerer Gasstrom geprüft: Rₛ = "+fmt(run.minRs,2)+". Vergleiche nun bei sonst gleicher Methode 15 m und 30 m Säulenlänge.";
+        }else{
+          els.taskFeedback.className="feedback warn";
+          els.taskFeedback.textContent="Für diesen Vergleich soll nur der Gasstrom verändert werden. Wähle „mittel“ und behalte die bisherige Temperatur bei.";
+        }
+      }else if(taskStage===3){
+        const prev=taskMilestones.flow;
+        const valid=prev && taskRunMatches(run,{
+          column_id:"COLUMN_NP",length_m:30,temperature_c:prev.method.temperature_c,flow_key:"medium"
+        });
+        if(valid){
+          taskMilestones.length=run;
+          taskStage=4;
+          els.taskFeedback.className="feedback good";
+          els.taskFeedback.textContent="Parametervergleich vollständig. Die längere Säule verbessert die Auflösung, verlängert aber die Laufzeit. Vergleiche jetzt alle Runs und formuliere deine Methodenbilanz.";
+        }else{
+          els.taskFeedback.className="feedback warn";
+          els.taskFeedback.textContent="Ändere für diesen Schritt nur die Säulenlänge auf 30 m.";
+        }
+      }
+      renderTaskWorkspace();
+    }else if(activeTaskId==="GC02" && taskStage===0){
+      if(run.analytes.length>=2 && run.minRs!==null && run.minRs>=1.5){
+        taskMilestones.method=run;
+        taskStage=1;
+        els.taskFeedback.className="feedback good";
+        els.taskFeedback.textContent="Brauchbare Trennung erreicht: min. Rₛ = "+fmt(run.minRs,2)+". Die Methode wird jetzt für die Referenzmessungen fixiert.";
+        renderTaskWorkspace();
+        renderIdentification(run);
+      }else{
+        els.taskFeedback.className="feedback warn";
+        els.taskFeedback.textContent="Noch nicht ausreichend getrennt. Entwickle die Methode weiter, bis min. Rₛ ≥ 1,5 erreicht ist.";
+      }
+    }
+  }
+
+  function updateTaskIdentification(run,state){
+    if(activeTaskId!=="GC02" || taskCompleted || taskStage<1 || run!==lastRun) return;
+    const candidates=identificationCandidateIds(run);
+    const checked=candidates.filter(id=>Object.prototype.hasOwnProperty.call(state.assignments,id)).length;
+    const peaksComplete=identificationComplete(run,state);
+    const allCandidates=taskAllCandidatesChecked(run,state);
+    if(peaksComplete && allCandidates){
+      taskCompleted=true;
+      taskStage=3;
+      taskMilestones.identification=Object.assign({},state.assignments);
+      els.taskFeedback.className="feedback good";
+      els.taskFeedback.textContent="Alle drei Peaks und beide Negativkandidaten sind geprüft. Die unbekannte Probe ist vollständig bearbeitet.";
+      renderTaskWorkspace();
+      renderTaskSummary();
+    }else{
+      els.taskFeedback.className="feedback neutral";
+      els.taskFeedback.textContent="Referenzprüfung: "+checked+" von "+candidates.length+" Kandidaten bearbeitet"+
+        (peaksComplete?". Alle Peaks sind bereits zugeordnet; prüfe noch die übrigen Kandidaten als Negativkontrollen.":".");
+      renderTaskWorkspace();
+    }
+  }
+
+  function finishTask(){
+    if(activeTaskId!=="GC01" || taskStage<4 || taskCompleted) return;
+    const text=String(els.taskReflectionText.value||"").trim();
+    if(text.length<30){
+      els.taskFeedback.className="feedback warn";
+      els.taskFeedback.textContent="Die Begründung ist noch sehr kurz. Nenne Auflösung, Laufzeit und mindestens einen veränderten Methodenparameter.";
+      return;
+    }
+    taskCompleted=true;
+    taskMilestones.reflection=text;
+    renderTaskWorkspace();
+    renderTaskSummary();
+    applyTaskControlLocks();
+  }
+
+  function renderTaskSummary(){
+    if(!activeTaskId || !taskCompleted || !els.taskSummary) return;
+    if(activeTaskId==="GC01"){
+      const acceptable=history.filter(r=>r.minRs!==null && r.minRs>=1.5);
+      const best=acceptable.slice().sort((a,b)=>a.runtime-b.runtime)[0] || taskMilestones.flow || taskMilestones.length;
+      els.taskSummary.innerHTML="<strong>GC-01 · Methodenbilanz</strong><ul>"+
+        "<li>Ausgang: "+methodText(taskMilestones.baseline)+"</li>"+
+        "<li>Temperaturvergleich: "+methodText(taskMilestones.temperature)+"</li>"+
+        "<li>Gasstromvergleich: "+methodText(taskMilestones.flow)+"</li>"+
+        "<li>Längere Säule: "+methodText(taskMilestones.length)+"</li>"+
+        "<li><strong>Kürzeste analytisch brauchbare Methode im Versuch:</strong> "+methodText(best)+"</li>"+
+        "</ul><p><strong>Begründung:</strong> "+escapeHtml(taskMilestones.reflection||"")+"</p>";
+    }else{
+      const run=taskMilestones.method;
+      const state=run?identificationState(run):null;
+      const positives=[];
+      const negatives=[];
+      if(state){
+        Object.entries(state.assignments).forEach(([sid,peak])=>{
+          const label=substance(sid)?.name_de||sid;
+          if(peak==="NONE") negatives.push(label);
+          else positives.push(peak+" = "+label);
+        });
+      }
+      els.taskSummary.innerHTML="<strong>GC-02 · Unbekannte Probe vollständig analysiert</strong><ul>"+
+        "<li>Methode: "+methodText(run)+"</li>"+
+        "<li>Identifizierte Peaks: "+escapeHtml(positives.join(" · "))+"</li>"+
+        "<li>Nicht passende Referenzkandidaten: "+escapeHtml(negatives.join(" · "))+"</li>"+
+        "</ul><p>Die Stoffzuordnung beruht auf Referenzmessungen unter unveränderten GC-Bedingungen; ein nicht passender Standard ist dabei ebenfalls ein analytischer Befund.</p>";
+    }
+    els.taskSummary.hidden=false;
   }
 
   function setFeedback(text,kind){

@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="GC-LAB – browserbasiertes virtuelles Gaschromatographie-Labor für den Chemieunterricht.">
   <title>GC-LAB – Virtueller Gaschromatograph</title>
-  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="styles.css?v=0.5.0">
 </head>
 <body>
   <header class="hero">
@@ -14,7 +14,7 @@
       <h1>GC-LAB</h1>
       <p>Gaschromatographie verstehen, Methoden entwickeln und Trennqualität beurteilen.</p>
     </div>
-    <div class="version">v0.4.0<br><small id="modeLabel">Single-Mode</small></div>
+    <div class="version">v0.5.0<br><small id="modeLabel">Single-Mode</small></div>
   </header>
 
   <div id="bridgeContext" class="bridge-context">
@@ -61,6 +61,54 @@
       <div><strong>Zielpeak – vergrößert</strong><span id="verificationZoomLegend">Vergleich der Peakhöhen am Zielsignal.</span></div>
       <canvas id="verificationZoomCanvas" width="1000" height="210" aria-label="Vergrößerter Zielpeak"></canvas>
     </div>
+  </section>
+
+  <section id="taskPanel" class="task-panel card" hidden>
+    <div class="task-panel-head">
+      <div>
+        <p class="kicker">Lernaufgaben</p>
+        <h2>Gaschromatographie schrittweise erschließen</h2>
+        <p class="hint">Zwei Aufgaben führen vom gezielten Parametervergleich zur selbstständigen Analyse einer unbekannten Mischprobe.</p>
+      </div>
+      <button id="taskFreeBtn" class="secondary compact" type="button">Freies Labor</button>
+    </div>
+
+    <div class="task-choice-grid">
+      <article class="task-choice">
+        <div class="task-choice-badges"><span>GC-01</span><span>geführt</span><span>Einstieg</span></div>
+        <h3>Wie entsteht eine gute Trennung?</h3>
+        <p>Starte mit einer bewusst schlechten Methode und untersuche nacheinander den Einfluss von Temperatur, Gasstrom und Säulenlänge.</p>
+        <button class="primary compact" type="button" data-task-start="GC01">GC-01 starten</button>
+      </article>
+      <article class="task-choice">
+        <div class="task-choice-badges"><span>GC-02</span><span>offener</span><span>Fortgeschritten</span></div>
+        <h3>Eine unbekannte Mischprobe untersuchen</h3>
+        <p>Entwickle selbstständig eine brauchbare Methode für GC-U02 und identifiziere anschließend alle Peaks mit Referenzstandards – einschließlich nicht passender Kandidaten.</p>
+        <button class="primary compact" type="button" data-task-start="GC02">GC-02 starten</button>
+      </article>
+    </div>
+
+    <article id="taskWorkspace" class="task-workspace" hidden>
+      <div class="task-workspace-head">
+        <div>
+          <div id="taskBadges" class="task-choice-badges"></div>
+          <h2 id="taskTitle">–</h2>
+          <p id="taskGoal" class="hint"></p>
+        </div>
+        <span id="taskProgress" class="status-pill">–</span>
+      </div>
+      <div id="taskSteps" class="task-steps"></div>
+      <div id="taskInstruction" class="task-instruction"></div>
+      <div id="taskFeedback" class="feedback neutral">Aufgabe auswählen und starten.</div>
+      <div id="taskReflection" class="task-reflection" hidden>
+        <label for="taskReflectionText"><strong>Methodenbilanz</strong>
+          <span>Warum ist deine ausgewählte Methode für diese Aufgabe besser als der Ausgangsversuch?</span>
+        </label>
+        <textarea id="taskReflectionText" rows="3" placeholder="Begründe mit Auflösung, Laufzeit und mindestens einem veränderten Methodenparameter."></textarea>
+        <button id="taskFinishBtn" class="primary compact" type="button">Aufgabe abschließen</button>
+      </div>
+      <div id="taskSummary" class="task-summary" hidden></div>
+    </article>
   </section>
 
   <main class="layout">
@@ -233,6 +281,6 @@
   </main>
 
   <footer>GC-LAB · browserbasiert · GitHub-Pages-tauglich · keine Installation</footer>
-  <script src="app.js" defer></script>
+  <script src="app.js?v=0.5.0" defer></script>
 </body>
 </html>

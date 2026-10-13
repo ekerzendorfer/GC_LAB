@@ -1,6 +1,6 @@
 # GC-LAB
 
-**Version:** v0.4.0 – Trainingsserie unbekannter Proben und Trennprozess-Animation  
+**Version:** v0.5.0 – Lernaufgaben für Einstieg und unbekannte Proben  
 **Projekt:** CHEMIE mit KI – Digitales Analytiklabor
 
 Browserbasiertes virtuelles Gaschromatographie-Labor ohne Build-Prozess und ohne Backend.
@@ -288,3 +288,49 @@ Für eine besser beobachtbare Prozessdarstellung wurden die Bildschirmgeschwindi
 
 Auch Referenzstandard-Läufe verwenden jetzt 40×. Die Funktion **Animation wiederholen** nutzt 8×.
 
+
+
+## v0.5.0 – Zwei integrierte Lernaufgaben
+
+Der eigenständige Single-Mode enthält jetzt einen Aufgabenbereich oberhalb des freien Labors. Die Hub- und Bestätigungsmodi bleiben unverändert.
+
+### GC-01 · Wie entsteht eine gute Trennung?
+
+Geführter Einstieg mit Ethylacetat / 1-Butanol (50 : 50).
+
+Ausgangspunkt ist bewusst eine ungeeignete Methode:
+- unpolare Säule
+- 15 m
+- 140 °C
+- hoher Gasstrom
+
+Die Aufgabe führt anschließend durch klar getrennte Parametervergleiche:
+1. Ausgangslauf und Trennprozess beobachten
+2. ausschließlich die Temperatur verändern, bis die Trennung deutlich verbessert ist
+3. bei gleicher Temperatur den Gasstrom auf mittel ändern
+4. bei sonst gleicher Methode 15 m und 30 m Säulenlänge vergleichen
+5. Versuchshistorie auswerten und eine Methodenbilanz formulieren
+
+Die jeweils nicht untersuchten Parameter sind gesperrt. Am Ende zeigt die App die vier Vergleichsläufe und die kürzeste im eigenen Versuch analytisch brauchbare Methode. Die SchülerInnen müssen zusätzlich begründen, warum sie eine Methode als geeigneten Kompromiss aus Auflösung und Laufzeit beurteilen.
+
+### GC-02 · Eine unbekannte Mischprobe untersuchen
+
+Offenere Aufgabe mit der bereits kuratierten leichten unbekannten Probe GC-U02.
+
+Arbeitsweg:
+1. selbstständig eine GC-Methode mit min. R_s >= 1,5 entwickeln
+2. Methode für die Identifikation fixieren
+3. alle fünf angebotenen Referenzstandards unter unveränderten Bedingungen messen
+4. passende Standards den drei Peaks zuordnen
+5. die zwei nicht enthaltenen Kandidaten ausdrücklich als "kein passender Peak" erkennen
+
+Die Aufgabe ist erst abgeschlossen, wenn nicht nur alle Probenpeaks identifiziert, sondern auch alle Referenzkandidaten geprüft wurden. Damit werden positive und negative Referenzbefunde gleichwertig als analytische Evidenz behandelt.
+
+### Direktlinks
+
+Die Aufgaben können auch direkt über URL-Parameter gestartet werden:
+
+- `?task=GC01`
+- `?task=GC02`
+
+Dies ist für spätere direkte Verlinkungen aus dem Online-Begleitkurs vorgesehen.

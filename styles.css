@@ -92,3 +92,42 @@ footer{max-width:1500px;margin:0 auto;padding:0 22px 25px;color:#71869e;text-ali
 #processCanvas{display:block;width:100%;height:auto;border:1px solid rgba(42,61,88,.85);border-radius:10px;background:#06101b}
 .process-note{margin:8px 2px 0}
 @media(max-width:720px){.process-controls{flex-direction:column}.process-controls button.compact{width:100%}.process-head{flex-direction:column}}
+
+
+/* v0.5.0 · Lernaufgaben */
+.task-panel{max-width:1500px;margin:0 auto 14px;padding:18px}
+.task-panel-head{display:flex;justify-content:space-between;gap:18px;align-items:flex-start}
+.task-panel-head h2{margin:.15rem 0 .3rem}
+.task-panel-head .hint{margin:.15rem 0 0}
+.task-choice-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:14px}
+.task-choice{padding:14px;border:1px solid var(--line);border-radius:14px;background:#0b1728}
+.task-choice h3{margin:.55rem 0 .35rem}
+.task-choice p{margin:0 0 12px;color:var(--muted)}
+.task-choice button{width:auto;margin:0}
+.task-choice-badges{display:flex;gap:6px;flex-wrap:wrap}
+.task-choice-badges span{display:inline-flex;padding:4px 8px;border-radius:999px;background:rgba(34,184,207,.12);border:1px solid rgba(34,184,207,.35);color:#b9f3fa;font-size:.76rem;font-weight:800}
+.task-workspace{margin-top:14px;padding:16px;border:1px solid rgba(96,165,250,.42);border-radius:14px;background:rgba(30,64,175,.08)}
+.task-workspace-head{display:flex;justify-content:space-between;gap:16px;align-items:flex-start}
+.task-workspace-head h2{margin:.45rem 0 .2rem}
+.task-steps{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:8px;margin:14px 0}
+.task-step{padding:10px 11px;border:1px solid var(--line);border-radius:11px;background:#0b1728;color:var(--muted);font-size:.84rem}
+.task-step strong{display:block;color:#dce8f5;margin-bottom:3px}
+.task-step.active{border-color:rgba(251,191,36,.65);background:rgba(120,83,15,.16)}
+.task-step.done{border-color:rgba(52,211,153,.55);background:rgba(6,78,59,.18)}
+.task-step.done strong{color:#9cf0d0}
+.task-instruction{padding:12px 14px;border-left:3px solid #60a5fa;border-radius:8px;background:rgba(30,64,175,.11);margin-bottom:10px}
+.task-instruction strong{display:block;margin-bottom:4px}
+.task-reflection{margin-top:12px;padding:12px;border:1px solid var(--line);border-radius:12px;background:#0b1728}
+.task-reflection label{display:grid;gap:3px;margin-bottom:8px}
+.task-reflection label span{color:var(--muted);font-size:.84rem}
+.task-reflection textarea{width:100%;resize:vertical;min-height:84px;padding:10px 11px;border:1px solid var(--line);border-radius:9px;background:#07101c;color:var(--text);font:inherit}
+.task-reflection button{width:auto;margin:10px 0 0}
+.task-summary{margin-top:12px;padding:13px 14px;border:1px solid rgba(52,211,153,.5);border-radius:12px;background:rgba(6,78,59,.18)}
+.task-summary strong{color:#9cf0d0}
+.task-summary ul{margin:.45rem 0 0;padding-left:1.2rem}
+body.task-active .controls h2::after{content:" · Aufgabe";color:#7dd3fc;font-size:.78rem;font-weight:700}
+@media(max-width:820px){
+  .task-choice-grid{grid-template-columns:1fr}
+  .task-panel-head,.task-workspace-head{flex-direction:column}
+  .task-panel-head>button{width:100%}
+}
